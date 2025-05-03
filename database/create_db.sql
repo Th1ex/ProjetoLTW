@@ -11,7 +11,9 @@ CREATE TABLE IF NOT EXISTS users (
     email TEXT UNIQUE NOT NULL,
     name TEXT NOT NULL,
     is_admin INTEGER DEFAULT 0,      -- 0 = não é admin, 1 = é admin
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,-- em create_db.sql (tabela users)
+    wallet REAL DEFAULT 0          -- saldo do utilizador (€, começa 0)
+    
 );
 
 -- ==============================
@@ -47,15 +49,20 @@ CREATE TABLE IF NOT EXISTS services (
 -- Registra cada "contratação" de um serviço. Armazena o cliente e o freelancer por meio do service_id.
 -- ==============================
 CREATE TABLE IF NOT EXISTS orders (
-    order_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    service_id INTEGER NOT NULL,     -- referencia o serviço
-    client_id INTEGER NOT NULL,      -- usuário que está contratando (pode ser a mesma pessoa que user_id, mas normalmente não)
-    order_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-    status TEXT DEFAULT 'pending',   -- 'pending', 'in_progress', 'completed', 'cancelled'
-    total_price REAL NOT NULL,
+    order_id        INTEGER PRIMARY KEY AUTOINCREMENT,
+    service_id      INTEGER NOT NULL,
+    client_id       INTEGER NOT NULL,
+    total_price     REAL,
+    status          TEXT DEFAULT 'pending',
+    order_date      DATETIME DEFAULT CURRENT_TIMESTAMP,
+    -- ▸ NOVOS CAMPOS:
+    custom_price    REAL,
+    custom_delivery INTEGER,
+    --
     FOREIGN KEY (service_id) REFERENCES services(service_id),
-    FOREIGN KEY (client_id) REFERENCES users(user_id)
+    FOREIGN KEY (client_id)  REFERENCES users(user_id)
 );
+
 
 -- ==============================
 -- Tabela: reviews

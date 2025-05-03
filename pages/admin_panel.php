@@ -1,58 +1,88 @@
 <?php
-// pages/admin_panel.php
-
-// Inicia a sessão e verifica se o usuário está logado e é admin.
-// Certifique-se de que o login define $_SESSION['is_admin'] (por exemplo, 1 para admin, 0 para não admin).
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
-if (!isset($_SESSION['user_id']) || empty($_SESSION['is_admin']) || $_SESSION['is_admin'] != 1) {
-    echo "Acesso negado. Apenas administradores podem acessar essa página.";
+session_start();
+if (empty($_SESSION['is_admin']) || $_SESSION['is_admin'] != 1) {
+    header('Location: profile.php');   // ou página 403
     exit();
 }
-
 require_once __DIR__ . '/../templates/header.php';
 require_once __DIR__ . '/../database/connection.php';
-
 $db = getConnection();
 
-// Busca todas as categorias para listar
-$stmt = $db->query("SELECT * FROM categories ORDER BY category_name ASC");
-$categories = $stmt->fetchAll();
+/* ----- filtros de data (opcionais) ----- */
+$from = $_GET['from'] ?? '';
+$to   = $_GET['to']   ?? '';
+
+$whereDate = '';
+$params    = [];
+if ($from !== '') {
+    $whereDate .= " AND created_at >= :from ";
+    $params[':from'] = $from . ' 00:00:00';
+}
+if ($to !== '') {
+    $whereDate .= " AND created_at <= :to ";
+    $params[':to'] = $to . ' 23:59:59';
+}
+
+/* ----- estatísticas ----- */
+$stats = [];
+
+/* total de serviços publicados */
+$stmt = $db->prepare("SELECT COUNT(*) FROM services WHERE 1=1 $whereDate");
+$stmt->execute($params);
+$stats['servicos'] = $stmt->fetchColumn();
+
+/* pedidos concluídos */
+$stmt = $db->prepare("SELECT COUNT(*) FROM orders WHERE status='closed' $whereDate");
+$stmt->execute($params);
+$stats['pedidos_closed'] = $stmt->fetchColumn();
+
+/* total € pagos aos freelancers */
+$stmt = $db->prepare("SELECT COALESCE(SUM(total_price),0) FROM orders WHERE status='closed' $whereDate");
+$stmt->execute($params);
+$stats['total_pago'] = $stmt->fetchColumn();
+
+/* novos utilizadores */
+$stmt = $db->prepare("SELECT COUNT(*) FROM users WHERE 1=1 $whereDate");
+$stmt->execute($params);
+$stats['novos_users'] = $stmt->fetchColumn();
 ?>
 
 <h2>Painel de Administração</h2>
 
-<h3>Gerenciar Categorias</h3>
-<table border="1" cellpadding="5" cellspacing="0">
-  <thead>
-    <tr>
-      <th>ID</th>
-      <th>Nome da Categoria</th>
-      <th>Ações</th>
-    </tr>
-  </thead>
-  <tbody>
-    <?php foreach($categories as $cat): ?>
-    <tr>
-      <td><?= htmlspecialchars($cat['category_id']) ?></td>
-      <td><?= htmlspecialchars($cat['category_name']) ?></td>
-      <td>
-        <!-- Exemplo de links para editar ou excluir categoria -->
-        <a href="edit_category.php?id=<?= htmlspecialchars($cat['category_id']) ?>">Editar</a> | 
-        <a href="../actions/delete_category_action.php?id=<?= htmlspecialchars($cat['category_id']) ?>" onclick="return confirm('Tem certeza que deseja excluir essa categoria?');">Excluir</a>
-      </td>
-    </tr>
-    <?php endforeach; ?>
-  </tbody>
+<!-- filtro por data -->
+<form method="get" style="margin-bottom:20px;">
+    <label>De: <input type="date" name="from" value="<?= htmlspecialchars($from) ?>"></label>
+    <label>Até: <input type="date" name="to"   value="<?= htmlspecialchars($to) ?>"></label>
+    <button type="submit">Actualizar</button>
+    <button type="button" onclick="window.location='admin_panel.php'">Limpar</button>
+</form>
+
+<table border="1" cellpadding="5">
+  <tr><th>Métrica</th><th>Valor</th></tr>
+  <tr><td>Serviços publicados</td><td><?= $stats['servicos'] ?></td></tr>
+  <tr><td>Pedidos concluídos (closed)</td><td><?= $stats['pedidos_closed'] ?></td></tr>
+  <tr><td>Total pago a freelancers (€)</td><td><?= number_format($stats['total_pago'],2,',','.') ?></td></tr>
+  <tr><td>Nº de utilizadores registados</td><td><?= $stats['novos_users'] ?></td></tr>
 </table>
 
-<h3>Adicionar Nova Categoria</h3>
+<hr>
+
+<h3>Promover utilizador a administrador</h3>
+<form action="../actions/promote_user_action.php" method="post">
+    <label>Email do utilizador:
+        <input type="email" name="email" required>
+    </label>
+    <button type="submit">Promover</button>
+</form>
+
+<hr>
+
+<h3>Criar nova categoria</h3>
 <form action="../actions/add_category_action.php" method="post">
-  <label for="category_name">Nome da Categoria:</label>
-  <input type="text" id="category_name" name="category_name" required>
-  <button type="submit">Adicionar</button>
+    <label>Nome da categoria:
+        <input type="text" name="category_name" required>
+    </label>
+    <button type="submit">Adicionar</button>
 </form>
 
 <?php require_once __DIR__ . '/../templates/footer.php'; ?>

@@ -31,8 +31,8 @@ if (!$order) {
 if ($order['client_id'] != $_SESSION['user_id']) {
     die("Não tens permissão para avaliar este pedido.");
 }
-if ($order['status'] !== 'completed') {
-    die("Só é possível avaliar pedidos concluídos.");
+if ($order['status'] !== 'closed') {
+    die("Só é possível avaliar pedidos acabados.");
 }
 
 // Verifica se já existe uma review para este pedido

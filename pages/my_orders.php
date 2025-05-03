@@ -1,93 +1,106 @@
 <?php
-// pages/my_orders.php
-
 session_start();
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
     exit();
 }
-
 require_once __DIR__ . '/../templates/header.php';
 require_once __DIR__ . '/../database/connection.php';
 
 $db = getConnection();
 $client_id = $_SESSION['user_id'];
 
-// Seleciona os pedidos feitos pelo cliente logado (orders)
-// Junta com services para obter o título e delivery_time e com users para o nome do freelancer
+/* pedidos do cliente */
 $stmt = $db->prepare("
     SELECT 
-        orders.order_id,
-        orders.status,
-        orders.order_date,
-        orders.total_price,
-        services.title,
-        services.delivery_time,
-        users.username AS freelancerName
-    FROM orders
-    JOIN services ON orders.service_id = services.service_id
-    JOIN users ON services.user_id = users.user_id
-    WHERE orders.client_id = :client_id
-    ORDER BY orders.order_date DESC
+        o.order_id, o.service_id, o.status, o.order_date,
+        o.total_price, o.custom_price, o.custom_delivery,
+        s.title, s.user_id AS freelancer_id,
+        u.username AS freelancer
+    FROM orders o
+    JOIN services s ON o.service_id = s.service_id
+    JOIN users    u ON s.user_id    = u.user_id
+    WHERE o.client_id = :cid
+    ORDER BY o.order_date DESC
 ");
-$stmt->execute([':client_id' => $client_id]);
+$stmt->execute([':cid'=>$client_id]);
 $orders = $stmt->fetchAll();
 ?>
 
 <h2>Meus Pedidos</h2>
 
-<?php if (count($orders) === 0): ?>
-    <p>Não tens pedidos no momento.</p>
+<?php if (!$orders): ?>
+    <p>Não tens pedidos.</p>
 <?php else: ?>
-    <table border="1" cellpadding="5" cellspacing="0">
-        <thead>
-            <tr>
-                <th>ID do Pedido</th>
-                <th>Serviço</th>
-                <th>Freelancer</th>
-                <th>Preço</th>
-                <th>Status</th>
-                <th>Data do Pedido</th>
-                <th>Ações</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php foreach ($orders as $order): ?>
-                <tr>
-                    <td><?= htmlspecialchars($order['order_id']) ?></td>
-                    <td><?= htmlspecialchars($order['title']) ?></td>
-                    <td><?= htmlspecialchars($order['freelancerName']) ?></td>
-                    <td><?= htmlspecialchars($order['total_price']) ?> €</td>
-                    <td><?= htmlspecialchars($order['status']) ?></td>
-                    <td><?= htmlspecialchars($order['order_date']) ?></td>
-                    <td>
-                        <?php
-                        // ===== INÍCIO DO CÓDIGO DO PASSO 6: AVALIAÇÃO =====
-                        // Aqui implementamos a lógica para exibir o botão "Avaliar" se o pedido estiver marcado como 'completed'
-                        // e ainda não tiver sido avaliado.
-                        $order_id = $order['order_id'];
-                        $status   = $order['status'];
-                        
-                        // Prepara query para verificar se já existe uma review para esse pedido
-                        $stmtRev = $db->prepare("SELECT review_id FROM reviews WHERE order_id = :oid");
-                        $stmtRev->execute([':oid' => $order_id]);
-                        $reviewExists = $stmtRev->fetch();
+<table border="1" cellpadding="4" cellspacing="0">
+<thead>
+  <tr>
+    <th>ID</th><th>Serviço</th><th>Freelancer</th>
+    <th>Preço</th><th>Status</th><th>Data</th><th>Ações</th>
+  </tr>
+</thead>
+<tbody>
+<?php foreach ($orders as $o): ?>
+  <?php
+    $displayPrice = $o['custom_price'] !== null ? $o['custom_price'] : $o['total_price'];
+    $priceLabel   = $o['custom_price'] !== null ? ' (personalizado)' : '';
+  ?>
+  <tr>
+    <td><?= $o['order_id'] ?></td>
+    <td><?= htmlspecialchars($o['title']) ?></td>
+    <td><?= htmlspecialchars($o['freelancer']) ?></td>
+    <td><?= $displayPrice ?> €<?= $priceLabel ?></td>
+    <td><?= $o['status'] ?></td>
+    <td><?= $o['order_date'] ?></td>
+    <td>
+        <!-- link Mensagem (sempre) -->
+        <a href="../pages/messages_chat.php?user=<?= $o['freelancer_id'] ?>">Mensagem</a>
 
-                        if ($status === 'completed' && !$reviewExists) {
-                            // Mostra o link para a página de avaliação
-                            echo '<a href="add_review.php?order_id=' . htmlspecialchars($order_id) . '">Avaliar</a>';
-                        } elseif ($reviewExists) {
-                            echo '<span>Já Avaliado</span>';
-                        } else {
-                            echo '-';
-                        }
-                        // ===== FIM DO CÓDIGO DO PASSO 6 =====
-                        ?>
-                    </td>
-                </tr>
-            <?php endforeach; ?>
-        </tbody>
-    </table>
+        <?php
+        /* ---------- Ações específicas por estado ---------- */
+
+        /* oferta personalizada */
+        if ($o['status'] === 'custom_offered') {
+            echo ' | Oferta: '.$o['custom_price'].' € / '.$o['custom_delivery'].' d&nbsp;';
+            ?>
+            <form action="../actions/accept_custom_offer_action.php" method="post" style="display:inline;">
+                <input type="hidden" name="order_id" value="<?= $o['order_id'] ?>">
+                <button type="submit">Aceitar</button>
+            </form>
+        <?php
+        }
+
+        /* concluir & pagar (quando já completed pelo freelancer) */
+        if ($o['status'] === 'completed') {
+            echo ' | ';
+            ?>
+            <form action="../actions/complete_and_pay_action.php" method="post" style="display:inline;">
+                <input type="hidden" name="order_id" value="<?= $o['order_id'] ?>">
+                <button type="submit">Concluir&nbsp;/&nbsp;Pagar</button>
+            </form>
+        <?php
+        }
+
+        /* ★ Avaliação – depois que o pedido está fechado e ainda não foi avaliado ★ */
+        if ($o['status'] === 'closed') {
+            /* verifica se já existe review */
+            $stmtRev = $db->prepare("SELECT review_id FROM reviews WHERE order_id = :oid");
+            $stmtRev->execute([':oid' => $o['order_id']]);
+            if (!$stmtRev->fetch()) {
+                echo ' | ';
+                ?>
+                <a href="add_review.php?order_id=<?= $o['order_id'] ?>">Avaliar</a>
+                <?php
+            } else {
+                echo ' | Avaliado';
+            }
+        }
+        ?>
+    </td>
+  </tr>
+<?php endforeach; ?>
+</tbody>
+</table>
 <?php endif; ?>
 
 <?php require_once __DIR__ . '/../templates/footer.php'; ?>

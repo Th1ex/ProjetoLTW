@@ -58,6 +58,7 @@ $orders = $stmt->fetchAll();
                 <td><?= htmlspecialchars($order['status'])      ?></td>
                 <td><?= htmlspecialchars($order['order_date'])  ?></td>
                 <td>
+                    <a href="custom_offer.php?order_id=<?= $order['order_id'] ?>">Custom Offer</a>
                     <?php if ($order['status'] === 'pending'): ?>
                         <form action="../actions/complete_order_action.php"
                               method="post" style="display:inline;">
