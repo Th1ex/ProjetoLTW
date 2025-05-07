@@ -43,9 +43,13 @@ $categories = $stmt->fetchAll();
     <?php endforeach; ?>
   </select>
   
-  <!-- Campo para upload da imagem -->
-  <label for="image">Imagem do Serviço:</label>
-  <input type="file" id="image" name="image" accept="image/*">
+  <label>Ficheiros (imagens e/ou vídeos):
+  <input type="file"
+         name="files[]"            
+         multiple                  
+         accept="image/*,video/*"  
+         required>
+</label>
 
   <button type="submit">Adicionar Serviço</button>
 </form>

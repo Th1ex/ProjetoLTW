@@ -1,87 +1,84 @@
 <?php
 // actions/add_service_action.php
-
 session_start();
 if (!isset($_SESSION['user_id'])) {
     header('Location: ../pages/login.php');
     exit();
 }
-
 require_once __DIR__ . '/../database/connection.php';
 $db = getConnection();
 
-// Coleta de dados do formulário
-$title         = trim($_POST['title'] ?? '');
-$description   = trim($_POST['description'] ?? '');
-$price         = $_POST['price'] ?? '';
-$delivery_time = $_POST['delivery_time'] ?? '';
-$category_id   = $_POST['category_id'] ?? '';
-$user_id       = $_SESSION['user_id'];
+/* ── dados do formulário ───────────────────────────────────────── */
+$title   = trim($_POST['title'] ?? '');
+$descr   = trim($_POST['description'] ?? '');
+$price   = $_POST['price'] ?? 0;
+$days    = $_POST['delivery_time'] ?? 1;
+$catId   = $_POST['category_id'] ?? null;
 
-if (empty($title) || empty($description) || empty($price) || empty($delivery_time) || empty($category_id)) {
-    die("Preencha todos os campos necessários.");
+if ($title==='' || $descr==='' || !$catId) {
+    die('Campos obrigatórios em falta.');
 }
 
-$price = floatval($price);
-$delivery_time = intval($delivery_time);
+/* ── 1) cria o serviço ─────────────────────────────────────────── */
+$stmt = $db->prepare("
+  INSERT INTO services
+        (user_id, category_id, title, description, price, delivery_time, image)
+  VALUES (:uid, :cid, :t, :d, :p, :days, NULL)
+");
+$stmt->execute([
+  ':uid'  => $_SESSION['user_id'],
+  ':cid'  => $catId,
+  ':t'    => $title,
+  ':d'    => $descr,
+  ':p'    => $price,
+  ':days' => $days
+]);
 
-// Processar o upload da imagem (opcional)
-$imagePath = null;  // Valor padrão se nenhuma imagem for enviada.
+$serviceId = $db->lastInsertId();   // ← guardamos aqui uma única vez
+$imageMini = null;                  // primeira imagem (miniatura)
 
-if (isset($_FILES['image']) && $_FILES['image']['error'] == UPLOAD_ERR_OK) {
+/* ── 2) processa uploads múltiplos ─────────────────────────────── */
+$uploadDir = __DIR__ . '/../uploads/';
+if (!is_dir($uploadDir)) mkdir($uploadDir, 0755);
 
-    // Pasta de destino para os uploads (certifique-se de que a pasta 'uploads' existe ou será criada)
-    $uploadDir = __DIR__ . '/../uploads/';
-    
-    // Cria o diretório se não existir
-    if (!is_dir($uploadDir)) {
-        mkdir($uploadDir, 0755, true);
-    }
-    
-    // Obtém dados do arquivo
-    $fileTmpPath = $_FILES['image']['tmp_name'];
-    $fileName = $_FILES['image']['name'];
-    $fileExt = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
-    
-    // Verifica se a extensão é permitida
-    $allowedExts = ['jpg', 'jpeg', 'png', 'gif'];
-    if (!in_array($fileExt, $allowedExts)) {
-        die("Formato de imagem não permitido. Escolha JPG, JPEG, PNG ou GIF.");
-    }
-    
-    // Gera um nome único para o arquivo
-    $newFileName = uniqid('img_', true) . '.' . $fileExt;
-    $destPath = $uploadDir . $newFileName;
-    
-    if (!move_uploaded_file($fileTmpPath, $destPath)) {
-        die("Erro ao mover o arquivo de imagem.");
-    }
-    
-    // Armazena o nome do arquivo (pode ser o caminho relativo) no banco de dados
-    $imagePath = $newFileName;
-}
+foreach ($_FILES['files']['name'] as $i => $origName) {
+    $tmp = $_FILES['files']['tmp_name'][$i];
+    if (!is_uploaded_file($tmp)) continue;               // ignora vazios
 
-try {
-    // Insere o serviço, incluindo o campo 'image'
-    $stmt = $db->prepare("
-        INSERT INTO services 
-            (user_id, category_id, title, description, price, delivery_time, image) 
-        VALUES 
-            (:user_id, :category_id, :title, :description, :price, :delivery_time, :image)
-    ");
-    $stmt->execute([
-        ':user_id'       => $user_id,
-        ':category_id'   => $category_id,
-        ':title'         => $title,
-        ':description'   => $description,
-        ':price'         => $price,
-        ':delivery_time' => $delivery_time,
-        ':image'         => $imagePath  // Pode ser null se nenhum arquivo foi enviado
+    $ext = strtolower(pathinfo($origName, PATHINFO_EXTENSION));
+    $new = uniqid('media_') . '.' . $ext;
+    move_uploaded_file($tmp, $uploadDir . $new);
+
+    /* tipo: image ou video */
+    $mime = $_FILES['files']['type'][$i] ?? '';
+    $type = str_starts_with($mime, 'video') ? 'video' : 'image';
+
+    /* grava em service_media */
+    $db->prepare("
+        INSERT INTO service_media (service_id, file_name, media_type)
+        VALUES (:sid, :fn, :mt)
+    ")->execute([
+        ':sid' => $serviceId,   // ← usa sempre o mesmo service_id
+        ':fn'  => $new,
+        ':mt'  => $type
     ]);
 
-    header('Location: ../pages/list_services.php');
-    exit();
-
-} catch (PDOException $e) {
-    die("Erro ao inserir serviço: " . $e->getMessage());
+    /* define miniatura se ainda não definida e ficheiro é imagem */
+    if ($type === 'image' && $imageMini === null) {
+        $imageMini = $new;
+    }
 }
+
+/* ── 3) guarda a miniatura na coluna image (compatibilidade) ───── */
+if ($imageMini !== null) {
+    $db->prepare("
+        UPDATE services SET image = :img WHERE service_id = :sid
+    ")->execute([
+        ':img' => $imageMini,
+        ':sid' => $serviceId
+    ]);
+}
+
+/* ── 4) redirecciona ───────────────────────────────────────────── */
+header('Location: ../pages/my_services.php');
+exit();

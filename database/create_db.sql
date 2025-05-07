@@ -91,5 +91,15 @@ CREATE TABLE IF NOT EXISTS messages (
     FOREIGN KEY (receiver_id) REFERENCES users(user_id)
 );
 
+CREATE TABLE IF NOT EXISTS service_media (
+    media_id    INTEGER PRIMARY KEY AUTOINCREMENT,
+    service_id  INTEGER NOT NULL,
+    file_name   TEXT    NOT NULL,
+    media_type  TEXT    NOT NULL,     -- 'image' | 'video'
+    FOREIGN KEY (service_id) REFERENCES services(service_id)
+);
+
+
+
 INSERT INTO categories (category_name) VALUES ('Design');
 INSERT INTO categories (category_name) VALUES ('Programação');
