@@ -18,37 +18,42 @@ $stmt->execute();
 $categories = $stmt->fetchAll();
 ?>
 
-<h2>Adicionar Novo Serviço</h2>
+<div class="add-service-page">
+  <h2>Adicionar Novo Serviço</h2>
 
-<form action="../actions/add_service_action.php" method="post" enctype="multipart/form-data">
-  <label for="title">Título do Serviço:</label>
-  <input type="text" id="title" name="title" required>
+  <form action="../actions/add_service_action.php" method="post" enctype="multipart/form-data">
+    <label for="title">Título do Serviço:</label>
+    <input type="text" id="title" name="title" required>
 
-  <label for="description">Descrição:</label>
-  <textarea id="description" name="description" rows="4" required></textarea>
+    <label for="description">Descrição:</label>
+    <textarea id="description" name="description" rows="4" required></textarea>
 
-  <label for="price">Preço (em euros):</label>
-  <input type="number" step="0.01" id="price" name="price" required>
+    <label for="price">Preço (em euros):</label>
+    <input type="number" step="0.01" id="price" name="price" required>
 
-  <label for="delivery_time">Tempo de Entrega (dias):</label>
-  <input type="number" id="delivery_time" name="delivery_time" min="1" required>
+    <label for="delivery_time">Tempo de Entrega (dias):</label>
+    <input type="number" id="delivery_time" name="delivery_time" min="1" required>
 
-  <label for="category_id">Categoria:</label>
-  <select id="category_id" name="category_id" required>
-    <option value="">-- Selecione uma categoria --</option>
-    <?php foreach ($categories as $cat): ?>
-      <option value="<?= htmlspecialchars($cat['category_id']) ?>">
-        <?= htmlspecialchars($cat['category_name']) ?>
-      </option>
-    <?php endforeach; ?>
-  </select>
-  
-  <!-- Campo para upload da imagem -->
-  <label for="image">Imagem do Serviço:</label>
-  <input type="file" id="image" name="image" accept="image/*">
+    <label for="category_id">Categoria:</label>
+    <select id="category_id" name="category_id" required>
+      <option value="">-- Selecione uma categoria --</option>
+      <?php foreach ($categories as $cat): ?>
+        <option value="<?= htmlspecialchars($cat['category_id']) ?>">
+          <?= htmlspecialchars($cat['category_name']) ?>
+        </option>
+      <?php endforeach; ?>
+    </select>
+    
+    <label>Ficheiros (imagens e/ou vídeos):
+    <input type="file"
+          name="files[]"            
+          multiple                  
+          accept="image/*,video/*"  
+          required>
+  </label>
 
-  <button type="submit">Adicionar Serviço</button>
-</form>
-
-<?php require_once __DIR__ . '/../templates/footer.php'; ?>
+    <button type="submit">Adicionar Serviço</button>
+  </form>
+</div>
+  <?php require_once __DIR__ . '/../templates/footer.php'; ?>
 

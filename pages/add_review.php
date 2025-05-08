@@ -43,26 +43,34 @@ if ($stmtRev->fetch()) {
 }
 ?>
 
-<h2>Avaliar Pedido #<?= htmlspecialchars($order_id) ?></h2>
+<div class="review-container">
+    <h2 class="review-title">Avaliar Pedido #<?= htmlspecialchars($order_id) ?></h2>
 
-<form action="../actions/review_action.php" method="post">
-    <input type="hidden" name="order_id" value="<?= htmlspecialchars($order_id) ?>">
-    
-    <label for="rating">Nota (1 a 5):</label>
-    <select name="rating" id="rating" required>
-        <option value="">-- Selecione --</option>
-        <option value="1">1 - Péssimo</option>
-        <option value="2">2 - Mau</option>
-        <option value="3">3 - Decente</option>
-        <option value="4">4 - Bom</option>
-        <option value="5">5 - Excelente</option>
-    </select>
+    <form action="../actions/review_action.php" method="post" class="review-form">
+        <input type="hidden" name="order_id" value="<?= htmlspecialchars($order_id) ?>">
+        
+        <div class="form-group">
+            <label for="rating">Nota (1 a 5):</label>
+            <select name="rating" id="rating" required>
+                <option value="">-- Selecione --</option>
+                <option value="1">1 - Péssimo</option>
+                <option value="2">2 - Mau</option>
+                <option value="3">3 - Decente</option>
+                <option value="4">4 - Bom</option>
+                <option value="5">5 - Excelente</option>
+            </select>
+        </div>
 
-    <label for="comment">Comentário (opcional):</label>
-    <textarea id="comment" name="comment" rows="4"></textarea>
+        <div class="form-group">
+            <label for="comment">Comentário (opcional):</label>
+            <textarea id="comment" name="comment" rows="4"></textarea>
+        </div>
 
-    <button type="submit">Enviar Avaliação</button>
-</form>
+        <div class="form-group">
+            <button type="submit" class="btn-primary">Enviar Avaliação</button>
+        </div>
+    </form>
+</div>
 
 <?php
 require_once __DIR__ . '/../templates/footer.php';

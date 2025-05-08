@@ -41,30 +41,30 @@ $stmtMsg->execute([
 $messages = $stmtMsg->fetchAll();
 ?>
 
-<h2>Conversa com <?= htmlspecialchars($contactUser['username']) ?></h2>
+<div class="chat-page">
+  <h2>Conversa com <?= htmlspecialchars($contactUser['username']) ?></h2>
 
-<div style="border: 1px solid #ccc; padding: 10px; max-width:600px;">
-  <?php if (!$messages): ?>
-    <p>Ainda não há mensagens aqui.</p>
-  <?php else: ?>
-    <?php foreach ($messages as $msg): 
-        // Verifica se a mensagem foi enviada pelo user logado ou pelo contact
-        $isSender = ($msg['sender_id'] == $logged_user);
-        $side = $isSender ? "Você" : htmlspecialchars($contactUser['username']);
-    ?>
-      <p><strong><?= $side ?>:</strong> <?= nl2br(htmlspecialchars($msg['content'])) ?> 
-         <em>(<?= $msg['sent_at'] ?>)</em></p>
-      <hr>
-    <?php endforeach; ?>
-  <?php endif; ?>
+  <div class="messages-container">
+    <?php if (!$messages): ?>
+      <p>Ainda não há mensagens aqui.</p>
+    <?php else: ?>
+      <?php foreach ($messages as $msg): 
+          // Verifica se a mensagem foi enviada pelo user logado ou pelo contact
+          $isSender = ($msg['sender_id'] == $logged_user);
+          $side = $isSender ? "Você" : htmlspecialchars($contactUser['username']);
+      ?>
+        <p><strong><?= $side ?>:</strong> <?= nl2br(htmlspecialchars($msg['content'])) ?> 
+          <em>(<?= $msg['sent_at'] ?>)</em></p>
+      <?php endforeach; ?>
+    <?php endif; ?>
+  </div>
+
+  <!-- Formulário para enviar nova mensagem -->
+  <form action="../actions/send_message_action.php" method="post">
+      <input type="hidden" name="receiver_id" value="<?= htmlspecialchars($contact_id) ?>">
+      <textarea name="content" rows="3" placeholder="Digite sua mensagem..." required></textarea>
+      <br>
+      <button type="submit">Enviar</button>
+  </form>
 </div>
-
-<!-- Formulário para enviar nova mensagem -->
-<form action="../actions/send_message_action.php" method="post">
-    <input type="hidden" name="receiver_id" value="<?= htmlspecialchars($contact_id) ?>">
-    <textarea name="content" rows="3" placeholder="Digite sua mensagem..." required></textarea>
-    <br>
-    <button type="submit">Enviar</button>
-</form>
-
 <?php require_once __DIR__ . '/../templates/footer.php'; ?>

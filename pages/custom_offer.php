@@ -21,17 +21,21 @@ $order = $stmt->fetch();
 if (!$order) die('Pedido não encontrado');
 
 ?>
-<h2>Custom Offer para pedido #<?= $order_id ?></h2>
 
-<form action="../actions/send_custom_offer_action.php" method="post">
-    <input type="hidden" name="order_id" value="<?= $order_id ?>">
-    <label>Preço personalizado (€):</label>
-    <input type="number" step="0.01" name="custom_price" required>
-    <br>
-    <label>Prazo personalizado (dias):</label>
-    <input type="number" name="custom_delivery" min="1" required>
-    <br><br>
-    <button type="submit">Enviar oferta</button>
-</form>
+<div class="custom-offer-page">
+    <h2 class="custom-offer-title">Custom Offer para pedido #<?= $order_id ?></h2>
+
+    <form action="../actions/send_custom_offer_action.php" method="post">
+        <input type="hidden" name="order_id" value="<?= $order_id ?>">
+
+        <label for="custom_price">Preço personalizado (€):</label>
+        <input type="number" step="0.01" name="custom_price" id="custom_price" required>
+
+        <label for="custom_delivery">Prazo personalizado (dias):</label>
+        <input type="number" name="custom_delivery" id="custom_delivery" min="1" required>
+
+        <button type="submit">Enviar oferta</button>
+    </form>
+</div>
 
 <?php require_once __DIR__.'/../templates/footer.php'; ?>

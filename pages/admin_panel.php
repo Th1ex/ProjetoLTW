@@ -47,42 +47,43 @@ $stmt->execute($params);
 $stats['novos_users'] = $stmt->fetchColumn();
 ?>
 
-<h2>Painel de Administração</h2>
+<div class="admin-panel-page">
+    <h2>Painel de Administração</h2>
 
-<!-- filtro por data -->
-<form method="get" style="margin-bottom:20px;">
-    <label>De: <input type="date" name="from" value="<?= htmlspecialchars($from) ?>"></label>
-    <label>Até: <input type="date" name="to"   value="<?= htmlspecialchars($to) ?>"></label>
-    <button type="submit">Actualizar</button>
-    <button type="button" onclick="window.location='admin_panel.php'">Limpar</button>
-</form>
+    <!-- filtro por data -->
+    <form method="get" style="margin-bottom:20px;">
+        <label>De: <input type="date" name="from" value="<?= htmlspecialchars($from) ?>"></label>
+        <label>Até: <input type="date" name="to"   value="<?= htmlspecialchars($to) ?>"></label>
+        <button type="submit">Actualizar</button>
+        <button type="button" onclick="window.location='admin_panel.php'">Limpar</button>
+    </form>
 
-<table border="1" cellpadding="5">
-  <tr><th>Métrica</th><th>Valor</th></tr>
-  <tr><td>Serviços publicados</td><td><?= $stats['servicos'] ?></td></tr>
-  <tr><td>Pedidos concluídos (closed)</td><td><?= $stats['pedidos_closed'] ?></td></tr>
-  <tr><td>Total pago a freelancers (€)</td><td><?= number_format($stats['total_pago'],2,',','.') ?></td></tr>
-  <tr><td>Nº de utilizadores registados</td><td><?= $stats['novos_users'] ?></td></tr>
-</table>
+    <table border="1" cellpadding="5">
+    <tr><th>Métrica</th><th>Valor</th></tr>
+    <tr><td>Serviços publicados</td><td><?= $stats['servicos'] ?></td></tr>
+    <tr><td>Pedidos concluídos (closed)</td><td><?= $stats['pedidos_closed'] ?></td></tr>
+    <tr><td>Total pago a freelancers (€)</td><td><?= number_format($stats['total_pago'],2,',','.') ?></td></tr>
+    <tr><td>Nº de utilizadores registados</td><td><?= $stats['novos_users'] ?></td></tr>
+    </table>
 
-<hr>
+    <hr>
 
-<h3>Promover utilizador a administrador</h3>
-<form action="../actions/promote_user_action.php" method="post">
-    <label>Email do utilizador:
-        <input type="email" name="email" required>
-    </label>
-    <button type="submit">Promover</button>
-</form>
+    <h3>Promover utilizador a administrador</h3>
+    <form action="../actions/promote_user_action.php" method="post">
+        <label>Email do utilizador:
+            <input type="email" name="email" required>
+        </label>
+        <button type="submit">Promover</button>
+    </form>
 
-<hr>
+    <hr>
 
-<h3>Criar nova categoria</h3>
-<form action="../actions/add_category_action.php" method="post">
-    <label>Nome da categoria:
-        <input type="text" name="category_name" required>
-    </label>
-    <button type="submit">Adicionar</button>
-</form>
-
+    <h3>Criar nova categoria</h3>
+    <form action="../actions/add_category_action.php" method="post">
+        <label>Nome da categoria:
+            <input type="text" name="category_name" required>
+        </label>
+        <button type="submit">Adicionar</button>
+    </form>
+</div>
 <?php require_once __DIR__ . '/../templates/footer.php'; ?>

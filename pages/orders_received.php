@@ -30,54 +30,54 @@ $stmt = $db->prepare("
 $stmt->execute([':freelancer_id' => $freelancer_id]);
 $orders = $stmt->fetchAll();
 ?>
+<div class="orders-received-page">
+    <h2>Pedidos Recebidos</h2>
 
-<h2>Pedidos Recebidos</h2>
+    <?php if (!$orders): ?>
+        <p>Não há pedidos recebidos no momento.</p>
+    <?php else: ?>
+        <table border="1" cellpadding="5">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Serviço</th>
+                    <th>Cliente</th>
+                    <th>Preço</th>
+                    <th>Status</th>
+                    <th>Data</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+            <?php foreach ($orders as $order): ?>
+                <tr>
+                    <td><?= htmlspecialchars($order['order_id']) ?></td>
+                    <td><?= htmlspecialchars($order['title'])      ?></td>
+                    <td><?= htmlspecialchars($order['client_name']) ?></td>
+                    <td><?= htmlspecialchars($order['total_price']) ?> €</td>
+                    <td><?= htmlspecialchars($order['status'])      ?></td>
+                    <td><?= htmlspecialchars($order['order_date'])  ?></td>
+                    <td>
+                        <a href="custom_offer.php?order_id=<?= $order['order_id'] ?>">Custom Offer</a>
+                        <?php if ($order['status'] === 'pending'): ?>
+                            <form action="../actions/complete_order_action.php"
+                                method="post" style="display:inline;">
+                                <input type="hidden" name="order_id"
+                                    value="<?= htmlspecialchars($order['order_id']) ?>">
+                                <button type="submit">Marcar&nbsp;Concluído</button>
+                            </form>
+                            &nbsp;|&nbsp;
+                        <?php endif; ?>
 
-<?php if (!$orders): ?>
-    <p>Não há pedidos recebidos no momento.</p>
-<?php else: ?>
-    <table border="1" cellpadding="5">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Serviço</th>
-                <th>Cliente</th>
-                <th>Preço</th>
-                <th>Status</th>
-                <th>Data</th>
-                <th>Ações</th>
-            </tr>
-        </thead>
-        <tbody>
-        <?php foreach ($orders as $order): ?>
-            <tr>
-                <td><?= htmlspecialchars($order['order_id']) ?></td>
-                <td><?= htmlspecialchars($order['title'])      ?></td>
-                <td><?= htmlspecialchars($order['client_name']) ?></td>
-                <td><?= htmlspecialchars($order['total_price']) ?> €</td>
-                <td><?= htmlspecialchars($order['status'])      ?></td>
-                <td><?= htmlspecialchars($order['order_date'])  ?></td>
-                <td>
-                    <a href="custom_offer.php?order_id=<?= $order['order_id'] ?>">Custom Offer</a>
-                    <?php if ($order['status'] === 'pending'): ?>
-                        <form action="../actions/complete_order_action.php"
-                              method="post" style="display:inline;">
-                            <input type="hidden" name="order_id"
-                                   value="<?= htmlspecialchars($order['order_id']) ?>">
-                            <button type="submit">Marcar&nbsp;Concluído</button>
-                        </form>
-                        &nbsp;|&nbsp;
-                    <?php endif; ?>
-
-                    <!-- Link para conversar com o cliente -->
-                    <a href="../pages/messages_chat.php?user=<?= $order['client_id'] ?>">
-                        Mensagem&nbsp;ao&nbsp;Cliente
-                    </a>
-                </td>
-            </tr>
-        <?php endforeach; ?>
-        </tbody>
-    </table>
-<?php endif; ?>
-
+                        <!-- Link para conversar com o cliente -->
+                        <a href="../pages/messages_chat.php?user=<?= $order['client_id'] ?>">
+                            Mensagem&nbsp;ao&nbsp;Cliente
+                        </a>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+    <?php endif; ?>
+</div>
 <?php require_once __DIR__ . '/../templates/footer.php'; ?>

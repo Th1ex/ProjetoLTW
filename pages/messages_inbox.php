@@ -27,29 +27,30 @@ $stmt->execute([':user_id' => $user_id]);
 $contacts = $stmt->fetchAll();
 ?>
 
-<h2>Minhas Mensagens</h2>
+<div class="messages-inbox-page">
+  <h2>Minhas Mensagens</h2>
 
-<?php if (count($contacts) === 0): ?>
-  <p>Não tens conversas no momento.</p>
-<?php else: ?>
-  <ul>
-    <?php 
-    foreach ($contacts as $contact) {
-        // Identifica o outro utilizador nessa conversa
-        $contact_id = $contact['contact_id'];
+  <?php if (count($contacts) === 0): ?>
+    <p>Não tens conversas no momento.</p>
+  <?php else: ?>
+    <ul class="messages-list">
+      <?php 
+      foreach ($contacts as $contact) {
+          // Identifica o outro utilizador nessa conversa
+          $contact_id = $contact['contact_id'];
 
-        // Buscar nome do contacto
-        $stmtUser = $db->prepare("SELECT username FROM users WHERE user_id = :id");
-        $stmtUser->execute([':id' => $contact_id]);
-        $userInfo = $stmtUser->fetch();
+          // Buscar nome do contacto
+          $stmtUser = $db->prepare("SELECT username FROM users WHERE user_id = :id");
+          $stmtUser->execute([':id' => $contact_id]);
+          $userInfo = $stmtUser->fetch();
 
-        if ($userInfo) {
-            $contactUsername = htmlspecialchars($userInfo['username']);
-            echo "<li><a href=\"messages_chat.php?user={$contact_id}\">Conversar com {$contactUsername}</a></li>";
-        }
-    }
-    ?>
-  </ul>
-<?php endif; ?>
-
+          if ($userInfo) {
+              $contactUsername = htmlspecialchars($userInfo['username']);
+              echo "<li><a href=\"messages_chat.php?user={$contact_id}\">Conversar com {$contactUsername}</a></li>";
+          }
+      }
+      ?>
+    </ul>
+  <?php endif; ?>
+</div>
 <?php require_once __DIR__ . '/../templates/footer.php'; ?>

@@ -40,42 +40,43 @@ $stmtCat->execute();
 $categories = $stmtCat->fetchAll();
 ?>
 
-<h2>Editar Serviço</h2>
+<div class="edit-service-page">
+    <h2 class="edit-service-title">Editar Serviço</h2>
 
-<form action="../actions/edit_service_action.php" method="post">
-    <!-- ID escondido -->
-    <input type="hidden" name="service_id" value="<?= htmlspecialchars($service['service_id']) ?>">
+    <form action="../actions/edit_service_action.php" method="post">
+        <!-- ID escondido -->
+        <input type="hidden" name="service_id" value="<?= htmlspecialchars($service['service_id']) ?>">
 
-    <label for="title">Título:</label>
-    <input type="text" id="title" name="title" 
-           value="<?= htmlspecialchars($service['title']) ?>" required>
+        <label for="title">Título:</label>
+        <input type="text" id="title" name="title" 
+               value="<?= htmlspecialchars($service['title']) ?>" required>
 
-    <label for="description">Descrição:</label>
-    <textarea id="description" name="description" rows="4" required><?= htmlspecialchars($service['description']) ?></textarea>
+        <label for="description">Descrição:</label>
+        <textarea id="description" name="description" rows="4" required><?= htmlspecialchars($service['description']) ?></textarea>
 
-    <label for="price">Preço (em euros):</label>
-    <input type="number" step="0.01" id="price" name="price" 
-           value="<?= htmlspecialchars($service['price']) ?>" required>
+        <label for="price">Preço (em euros):</label>
+        <input type="number" step="0.01" id="price" name="price" 
+               value="<?= htmlspecialchars($service['price']) ?>" required>
 
-    <label for="delivery_time">Tempo de Entrega (dias):</label>
-    <input type="number" id="delivery_time" name="delivery_time" min="1"
-           value="<?= htmlspecialchars($service['delivery_time']) ?>" required>
+        <label for="delivery_time">Tempo de Entrega (dias):</label>
+        <input type="number" id="delivery_time" name="delivery_time" min="1"
+               value="<?= htmlspecialchars($service['delivery_time']) ?>" required>
 
-    <label for="category_id">Categoria:</label>
-    <select id="category_id" name="category_id" required>
-        <option value="">-- Selecione uma categoria --</option>
-        <?php foreach ($categories as $cat): 
-            $selected = ($cat['category_id'] == $service['category_id']) ? 'selected' : '';
-        ?>
-            <option value="<?= htmlspecialchars($cat['category_id']) ?>" <?= $selected ?>>
-                <?= htmlspecialchars($cat['category_name']) ?>
-            </option>
-        <?php endforeach; ?>
-    </select>
+        <label for="category_id">Categoria:</label>
+        <select id="category_id" name="category_id" required>
+            <option value="">-- Selecione uma categoria --</option>
+            <?php foreach ($categories as $cat): 
+                $selected = ($cat['category_id'] == $service['category_id']) ? 'selected' : '';
+            ?>
+                <option value="<?= htmlspecialchars($cat['category_id']) ?>" <?= $selected ?>>
+                    <?= htmlspecialchars($cat['category_name']) ?>
+                </option>
+            <?php endforeach; ?>
+        </select>
 
-    <button type="submit">Salvar Alterações</button>
-</form>
-
+        <button type="submit">Salvar Alterações</button>
+    </form>
+</div>
 <?php
 require_once __DIR__ . '/../templates/footer.php';
 ?>

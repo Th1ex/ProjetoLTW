@@ -32,45 +32,45 @@ $stmt = $db->prepare("
 $stmt->execute([':user_id' => $user_id]);
 $services = $stmt->fetchAll();
 ?>
+<div class="my-services-page">
+    <h2>Meus Serviços</h2>
 
-<h2>Meus Serviços</h2>
-
-<?php if (count($services) === 0): ?>
-    <p>Não tens serviços cadastrados.</p>
-<?php else: ?>
-    <table>
-        <thead>
-            <tr>
-                <th>Título</th>
-                <th>Categoria</th>
-                <th>Preço</th>
-                <th>Entrega (dias)</th>
-                <th>Ações</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php foreach ($services as $service): ?>
+    <?php if (count($services) === 0): ?>
+        <p>Não tens serviços cadastrados.</p>
+    <?php else: ?>
+        <table>
+            <thead>
                 <tr>
-                    <td><?= htmlspecialchars($service['title']) ?></td>
-                    <td><?= htmlspecialchars($service['category_name']) ?></td>
-                    <td><?= htmlspecialchars($service['price']) ?> €</td>
-                    <td><?= htmlspecialchars($service['delivery_time']) ?></td>
-                    <td>
-                        <!-- Link para página de edição -->
-                        <a href="edit_service.php?id=<?= $service['service_id'] ?>">Editar</a> 
-                        |
-                        <!-- Form para excluir serviço -->
-                        <form action="../actions/delete_service_action.php" method="post" style="display:inline;">
-                            <input type="hidden" name="service_id" value="<?= $service['service_id'] ?>">
-                            <button type="submit" onclick="return confirm('Tem certeza que deseja excluir este serviço?');">
-                                Excluir
-                            </button>
-                        </form>
-                    </td>
+                    <th>Título</th>
+                    <th>Categoria</th>
+                    <th>Preço</th>
+                    <th>Entrega (dias)</th>
+                    <th>Ações</th>
                 </tr>
-            <?php endforeach; ?>
-        </tbody>
-    </table>
-<?php endif; ?>
-
+            </thead>
+            <tbody>
+                <?php foreach ($services as $service): ?>
+                    <tr>
+                        <td><?= htmlspecialchars($service['title']) ?></td>
+                        <td><?= htmlspecialchars($service['category_name']) ?></td>
+                        <td><?= htmlspecialchars($service['price']) ?> €</td>
+                        <td><?= htmlspecialchars($service['delivery_time']) ?></td>
+                        <td>
+                            <!-- Link para página de edição -->
+                            <a href="edit_service.php?id=<?= $service['service_id'] ?>">Editar</a> 
+                            |
+                            <!-- Form para excluir serviço -->
+                            <form action="../actions/delete_service_action.php" method="post" style="display:inline;">
+                                <input type="hidden" name="service_id" value="<?= $service['service_id'] ?>">
+                                <button type="submit" onclick="return confirm('Tem certeza que deseja excluir este serviço?');">
+                                    Excluir
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    <?php endif; ?>
+</div>
 <?php require_once __DIR__ . '/../templates/footer.php'; ?>

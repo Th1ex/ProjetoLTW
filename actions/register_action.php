@@ -43,7 +43,7 @@ try {
     $_SESSION['username'] = $username;
 
     // Redireciona para a home ou para o perfil
-    header('Location: ../pages/home.php');
+    header('Location: ../pages/login.php');
     exit();
 
 } catch (PDOException $e) {

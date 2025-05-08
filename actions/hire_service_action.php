@@ -47,7 +47,7 @@ try {
     ]);
 
     // Redireciona para onde preferires; aqui usamos a home
-    header('Location: ../pages/home.php');
+    header('Location: ../pages/list_services.php');
     exit();
 } catch (PDOException $e) {
     die("Erro ao criar pedido: " . $e->getMessage());

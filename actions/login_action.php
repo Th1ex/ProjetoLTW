@@ -32,7 +32,7 @@ if (password_verify($password, $user['password_hash'])) {
     $_SESSION['username'] = $user['username'];
     $_SESSION['is_admin'] = $user['is_admin'];  // Armazena o valor de is_admin
 
-    header('Location: ../pages/home.php');
+    header('Location: ../pages/list_services.php');
     exit();
 } else {
     die("Credenciais inválidas (senha incorreta).");
