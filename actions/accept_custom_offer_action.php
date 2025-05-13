@@ -1,34 +1,34 @@
 <?php
 session_start();
-if (!isset($_SESSION['user_id'])) header('Location: ../pages/login.php');
-
 require_once __DIR__.'/../database/connection.php';
 $db = getConnection();
 
-$order_id = $_POST['order_id'] ?? '';
-if (!$order_id || !is_numeric($order_id)) die('ID inválido');
+$orderId = (int)$_POST['order_id'];
+$client  = $_SESSION['user_id'];
+$action  = $_POST['action'] ?? 'accept';   // ‘accept’ ou ‘reject’
 
-/* Verifica se o pedido pertence ao cliente logado e está em custom_offered */
-$stmt = $db->prepare("
-    SELECT status, custom_price
-    FROM orders
-    WHERE order_id = :oid AND client_id = :cid
-");
-$stmt->execute([':oid'=>$order_id, ':cid'=>$_SESSION['user_id']]);
-$order = $stmt->fetch();
-if (!$order) die('Pedido não encontrado');
-if ($order['status'] !== 'custom_offered') die('Status inválido');
+if ($action === 'accept') {
+    // copia o preço da oferta, volta a pending
+    $sql = "UPDATE orders
+            SET total_price = custom_price,
+                custom_price = NULL,
+                custom_delivery = NULL,
+                status = 'pending'
+            WHERE order_id = :id
+              AND client_id = :cli
+              AND status = 'custom_offered'";
+} else {            // reject
+    $sql = "UPDATE orders
+            SET custom_price = NULL,
+                custom_delivery = NULL,
+                status = 'pending'
+            WHERE order_id = :id
+              AND client_id = :cli
+              AND status = 'custom_offered'";
+}
 
-/* Aceita a oferta: 
-   - copia custom_price p/ total_price
-   - muda status p/ in_progress */
-$stmt = $db->prepare("
-    UPDATE orders
-    SET total_price = custom_price,
-        status      = 'in_progress'
-    WHERE order_id  = :oid
-");
-$stmt->execute([':oid'=>$order_id]);
+$stmt = $db->prepare($sql);
+$stmt->execute([':id'=>$orderId, ':cli'=>$client]);
 
 header('Location: ../pages/my_orders.php');
 exit();

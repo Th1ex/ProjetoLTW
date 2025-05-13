@@ -1,18 +1,24 @@
 <?php
 session_start();
+
+/* ↓ ajusta o caminho se o teu connection.php estiver noutra pasta */
 require_once __DIR__ . '/../database/connection.php';
+require_once __DIR__ . '/../includes/flash.php';
 
 $db = getConnection();
 
+/* --------- obter dados do formulário --------- */
 $username_or_email = trim($_POST['username'] ?? '');
-$password = $_POST['password'] ?? '';
+$password          = $_POST['password'] ?? '';
 
-// Validação simples de campos
-if (empty($username_or_email) || empty($password)) {
-    die('Preencha username/email e senha.');
+/* --------- validação básica --------- */
+if ($username_or_email === '' || $password === '') {
+    set_flash('error', 'Preenche username/email e senha.');
+    header('Location: ../pages/login.php');
+    exit;
 }
 
-// Seleciona o usuário incluindo o campo is_admin
+/* --------- procurar utilizador --------- */
 $stmt = $db->prepare("
     SELECT user_id, username, password_hash, is_admin
     FROM users
@@ -21,19 +27,17 @@ $stmt = $db->prepare("
 $stmt->execute([':ue' => $username_or_email]);
 $user = $stmt->fetch();
 
-if (!$user) {
-    die("Credenciais inválidas (utilizador não encontrado).");
+if (!$user || !password_verify($password, $user['password_hash'])) {
+    set_flash('error', 'Credenciais inválidas.');
+    header('Location: ../pages/login.php');
+    exit;
 }
 
-// Verifica se a senha é correta
-if (password_verify($password, $user['password_hash'])) {
-    // Salva as informações na sessão
-    $_SESSION['user_id']  = $user['user_id'];
-    $_SESSION['username'] = $user['username'];
-    $_SESSION['is_admin'] = $user['is_admin'];  // Armazena o valor de is_admin
+/* --------- sucesso: guardar sessão --------- */
+$_SESSION['user_id']  = $user['user_id'];
+$_SESSION['username'] = $user['username'];
+$_SESSION['is_admin'] = $user['is_admin'];  
 
-    header('Location: ../pages/list_services.php');
-    exit();
-} else {
-    die("Credenciais inválidas (senha incorreta).");
-}
+set_flash('success', 'Bem-vindo(a) de volta!');
+header('Location: ../pages/list_services.php');
+exit;

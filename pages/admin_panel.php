@@ -8,43 +8,53 @@ require_once __DIR__ . '/../templates/header.php';
 require_once __DIR__ . '/../database/connection.php';
 $db = getConnection();
 
-/* ----- filtros de data (opcionais) ----- */
+/* -------- filtros de data -------- */
 $from = $_GET['from'] ?? '';
 $to   = $_GET['to']   ?? '';
 
-$whereDate = '';
-$params    = [];
+$servicesDate = '';   // para a tabela services
+$ordersDate   = '';   // para a tabela orders (usa order_date)
+$usersDate    = '';   // para a tabela users
+
+$params = [];         // garante que existe SEMPRE
+
 if ($from !== '') {
-    $whereDate .= " AND created_at >= :from ";
+    $servicesDate .= " AND created_at  >= :from ";
+    $ordersDate   .= " AND order_date >= :from ";
+    $usersDate    .= " AND created_at >= :from ";
     $params[':from'] = $from . ' 00:00:00';
 }
 if ($to !== '') {
-    $whereDate .= " AND created_at <= :to ";
+    $servicesDate .= " AND created_at  <= :to ";
+    $ordersDate   .= " AND order_date <= :to ";
+    $usersDate    .= " AND created_at <= :to ";
     $params[':to'] = $to . ' 23:59:59';
 }
 
-/* ----- estatísticas ----- */
+/* -------- estatísticas -------- */
 $stats = [];
 
-/* total de serviços publicados */
-$stmt = $db->prepare("SELECT COUNT(*) FROM services WHERE 1=1 $whereDate");
+/* serviços publicados */
+$stmt = $db->prepare("SELECT COUNT(*) FROM services WHERE 1=1 $servicesDate");
 $stmt->execute($params);
 $stats['servicos'] = $stmt->fetchColumn();
 
 /* pedidos concluídos */
-$stmt = $db->prepare("SELECT COUNT(*) FROM orders WHERE status='closed' $whereDate");
+$stmt = $db->prepare("SELECT COUNT(*) FROM orders WHERE status='closed' $ordersDate");
 $stmt->execute($params);
 $stats['pedidos_closed'] = $stmt->fetchColumn();
 
-/* total € pagos aos freelancers */
-$stmt = $db->prepare("SELECT COALESCE(SUM(total_price),0) FROM orders WHERE status='closed' $whereDate");
+/* total pago aos freelancers (€) */
+$stmt = $db->prepare("SELECT COALESCE(SUM(total_price),0)
+                      FROM orders WHERE status='closed' $ordersDate");
 $stmt->execute($params);
 $stats['total_pago'] = $stmt->fetchColumn();
 
-/* novos utilizadores */
-$stmt = $db->prepare("SELECT COUNT(*) FROM users WHERE 1=1 $whereDate");
+/* novos utilizadores registados */
+$stmt = $db->prepare("SELECT COUNT(*) FROM users WHERE 1=1 $usersDate");
 $stmt->execute($params);
 $stats['novos_users'] = $stmt->fetchColumn();
+
 ?>
 
 <div class="admin-panel-page">

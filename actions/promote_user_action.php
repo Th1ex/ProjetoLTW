@@ -1,34 +1,46 @@
 <?php
 session_start();
+
+/* só administradores podem promover outros */
 if (empty($_SESSION['is_admin']) || $_SESSION['is_admin'] != 1) {
     header('Location: ../pages/profile.php');
-    exit();
+    exit;
 }
 
 require_once __DIR__ . '/../database/connection.php';
+require_once __DIR__ . '/../includes/flash.php';
+
 $db = getConnection();
 
+/* --------------------- validação do e-mail --------------------- */
 $email = trim($_POST['email'] ?? '');
 if ($email === '') {
-    die('Email em branco.');
+    set_flash('error', 'E-mail em branco.');
+    header('Location: ../pages/admin_panel.php');
+    exit;
 }
 
-/* procura utilizador */
+/* --------------------- procura utilizador --------------------- */
 $stmt = $db->prepare("SELECT user_id, is_admin FROM users WHERE email = :email");
 $stmt->execute([':email' => $email]);
 $user = $stmt->fetch();
 
 if (!$user) {
-    die('Utilizador não encontrado.');
+    set_flash('error', 'Utilizador não encontrado.');
+    header('Location: ../pages/admin_panel.php');
+    exit;
 }
 
-if ($user['is_admin'] == 1) {
-    die('Utilizador já é administrador.');
+if ($user['is_admin']) {
+    set_flash('error', 'Esse utilizador já é administrador.');
+    header('Location: ../pages/admin_panel.php');
+    exit;
 }
 
-/* actualiza */
-$stmt = $db->prepare("UPDATE users SET is_admin = 1 WHERE user_id = :uid");
-$stmt->execute([':uid' => $user['user_id']]);
+/* --------------------- promoção --------------------- */
+$upd = $db->prepare("UPDATE users SET is_admin = 1 WHERE user_id = :uid");
+$upd->execute([':uid' => $user['user_id']]);
 
-echo 'Utilizador promovido a admin com sucesso.';
-echo '<br><a href="../pages/admin_panel.php">Voltar ao painel</a>';
+set_flash('success', 'Utilizador promovido a administrador com sucesso!');
+header('Location: ../pages/admin_panel.php');
+exit;

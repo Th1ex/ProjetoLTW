@@ -62,13 +62,23 @@ $orders = $stmt->fetchAll();
             /* oferta personalizada */
             if ($o['status'] === 'custom_offered') {
                 echo ' | Oferta: '.$o['custom_price'].' € / '.$o['custom_delivery'].' d&nbsp;';
-                ?>
-                <form action="../actions/accept_custom_offer_action.php" method="post" style="display:inline;">
-                    <input type="hidden" name="order_id" value="<?= $o['order_id'] ?>">
-                    <button type="submit">Aceitar</button>
-                </form>
-            <?php
-            }
+                    // aceitar
+                ?>  <form action="../actions/accept_custom_offer_action.php"
+                        method="post" style="display:inline;">
+                        <input type="hidden" name="order_id" value="<?= $o['order_id'] ?>">
+                        <input type="hidden" name="action" value="accept">
+                        <button type="submit">Aceitar</button>
+                    </form>
+
+                    <!-- REJEITAR -->
+                    <form action="../actions/accept_custom_offer_action.php"
+                        method="post" style="display:inline;">
+                        <input type="hidden" name="order_id" value="<?= $o['order_id'] ?>">
+                        <input type="hidden" name="action" value="reject">
+                        <button type="submit">Rejeitar</button>
+                    </form>
+                <?php
+                }
 
             /* concluir & pagar (quando já completed pelo freelancer) */
             if ($o['status'] === 'completed') {

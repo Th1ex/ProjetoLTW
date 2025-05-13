@@ -3,6 +3,8 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 require_once __DIR__ . '/../database/connection.php';
+require_once __DIR__.'/../includes/flash.php';
+flash();   
 $db = getConnection();
 $current_page = basename($_SERVER['PHP_SELF']);
 ?>
