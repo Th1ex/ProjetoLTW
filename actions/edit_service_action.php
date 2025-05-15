@@ -1,59 +1,72 @@
 <?php
-// actions/edit_service_action.php
+require_once '../includes/security.php';
+require_once '../includes/auth.php';
+require_once '../includes/flash.php';
+require_once __DIR__ . '/../database/connection.php';
+
 session_start();
-if (!isset($_SESSION['user_id'])) {
-    header('Location: ../pages/login.php');
+require_login();
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    flash('Método inválido.', 'erro');
+    header('Location: ../pages/my_services.php');
     exit();
 }
 
-require_once __DIR__ . '/../database/connection.php';
-$db = getConnection();
+verify_csrf($_POST['csrf_token'] ?? '');
 
-$service_id    = $_POST['service_id'] ?? null;
-$title         = trim($_POST['title'] ?? '');
-$description   = trim($_POST['description'] ?? '');
-$price         = $_POST['price'] ?? '';
-$delivery_time = $_POST['delivery_time'] ?? '';
-$category_id   = $_POST['category_id'] ?? '';
+// Sanitizar inputs
+$service_id    = sanitize($_POST['service_id'] ?? '');
+$title         = sanitize($_POST['title'] ?? '');
+$description   = sanitize($_POST['description'] ?? '');
+$price         = sanitize($_POST['price'] ?? '0');
+$delivery_time = sanitize($_POST['delivery_time'] ?? '0');
+$category_id   = sanitize($_POST['category_id'] ?? '');
 
-if (!$service_id || !is_numeric($service_id)) {
-    die("ID de serviço inválido.");
+// Validações
+if (empty($service_id) || !is_numeric($service_id)) {
+    flash('ID de serviço inválido.', 'erro');
+    header('Location: ../pages/my_services.php');
+    exit();
 }
 
-// Verifica se o serviço pertence ao user logado
-$stmt = $db->prepare("SELECT user_id FROM services WHERE service_id = :id");
-$stmt->execute([':id' => $service_id]);
-$service = $stmt->fetch();
-
-if (!$service) {
-    die("Serviço não encontrado.");
-}
-if ($service['user_id'] != $_SESSION['user_id']) {
-    die("Não tens permissão para editar este serviço.");
-}
-
-// Validações simples
 if (empty($title) || empty($description) || empty($price) || empty($delivery_time) || empty($category_id)) {
-    die("Preencha todos os campos necessários.");
+    flash('Preencha todos os campos necessários.', 'erro');
+    header('Location: ../pages/my_services.php');
+    exit();
 }
 
-// Converter para float/int se necessário
-$price = floatval($price);
-$delivery_time = intval($delivery_time);
-
-// Atualiza o serviço
 try {
-    $stmt = $db->prepare("
-        UPDATE services
-        SET 
-            title = :title,
-            description = :description,
-            price = :price,
-            delivery_time = :delivery_time,
-            category_id = :category_id
-        WHERE service_id = :service_id
-    ");
-    $stmt->execute([
+    $db = getConnection();
+
+    // Verifica propriedade
+    $stmt = $db->prepare(
+        "SELECT user_id FROM services WHERE service_id = :id"
+    );
+    $stmt->execute([':id' => $service_id]);
+    $service = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$service) {
+        flash('Serviço não encontrado.', 'erro');
+        header('Location: ../pages/my_services.php');
+        exit();
+    }
+
+    if ($service['user_id'] != $_SESSION['user_id']) {
+        flash('Não tens permissão para editar este serviço.', 'erro');
+        header('Location: ../pages/my_services.php');
+        exit();
+    }
+
+    // Converter tipos
+    $price = floatval($price);
+    $delivery_time = intval($delivery_time);
+
+    // Atualizar serviço
+    $update = $db->prepare(
+        "UPDATE services SET title = :title, description = :description, price = :price, delivery_time = :delivery_time, category_id = :category_id WHERE service_id = :service_id"
+    );
+    $update->execute([
         ':title'         => $title,
         ':description'   => $description,
         ':price'         => $price,
@@ -62,8 +75,12 @@ try {
         ':service_id'    => $service_id
     ]);
 
+    flash('Serviço atualizado com sucesso!', 'sucesso');
     header('Location: ../pages/my_services.php');
     exit();
 } catch (PDOException $e) {
-    die("Erro ao atualizar serviço: " . $e->getMessage());
+    flash('Erro ao atualizar serviço: ' . $e->getMessage(), 'erro');
+    header('Location: ../pages/my_services.php');
+    exit();
 }
+?>

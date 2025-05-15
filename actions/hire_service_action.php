@@ -1,54 +1,67 @@
 <?php
-// actions/hire_service_action.php
-session_start();
-if (!isset($_SESSION['user_id'])) {
-    header('Location: ../pages/login.php');
-    exit();
-}
-
+require_once '../includes/security.php';
+require_once '../includes/auth.php';
+require_once '../includes/flash.php';
 require_once __DIR__ . '/../database/connection.php';
-$db = getConnection();
 
-// Lê o service_id do POST
-$service_id = $_POST['service_id'] ?? null;
-if (!$service_id || !is_numeric($service_id)) {
-    die("ID de serviço inválido.");
-}
+session_start();
+require_login();
 
-// Consulta o serviço para verificar se existe, e obter o preço
-$stmt = $db->prepare("SELECT price, user_id FROM services WHERE service_id = :id");
-$stmt->execute([':id' => $service_id]);
-$service = $stmt->fetch();
-
-if (!$service) {
-    die("Serviço não encontrado.");
-}
-
-// Impedir que o dono do serviço contrate o próprio serviço (opcional)
-if ($service['user_id'] == $_SESSION['user_id']) {
-    die("Não é possível contratar o próprio serviço.");
-}
-
-// Cria o pedido (order)
-$client_id = $_SESSION['user_id'];
-$status = 'pending';
-$total_price = $service['price']; // Copia o preço atual do serviço
-
-try {
-    $stmt = $db->prepare("
-        INSERT INTO orders (service_id, client_id, total_price, status)
-        VALUES (:service_id, :client_id, :total_price, :status)
-    ");
-    $stmt->execute([
-        ':service_id'   => $service_id,
-        ':client_id'    => $client_id,
-        ':total_price'  => $total_price,
-        ':status'       => $status
-    ]);
-
-    // Redireciona para onde preferires; aqui usamos a home
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    flash('Método inválido.', 'erro');
     header('Location: ../pages/list_services.php');
     exit();
-} catch (PDOException $e) {
-    die("Erro ao criar pedido: " . $e->getMessage());
 }
+
+verify_csrf($_POST['csrf_token'] ?? '');
+
+// Sanitizar input
+$service_id = sanitize($_POST['service_id'] ?? '');
+if (empty($service_id) || !is_numeric($service_id)) {
+    flash('ID de serviço inválido.', 'erro');
+    header('Location: ../pages/list_services.php');
+    exit();
+}
+
+try {
+    $db = getConnection();
+
+    // Consulta o serviço para verificar existência e obter dados
+    $stmt = $db->prepare("SELECT price, user_id FROM services WHERE service_id = :id");
+    $stmt->execute([':id' => $service_id]);
+    $service = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$service) {
+        flash('Serviço não encontrado.', 'erro');
+        header('Location: ../pages/list_services.php');
+        exit();
+    }
+
+    // Impedir contratação do próprio serviço
+    if ($service['user_id'] == $_SESSION['user_id']) {
+        flash('Não é possível contratar o próprio serviço.', 'erro');
+        header('Location: ../pages/list_services.php');
+        exit();
+    }
+
+    // Cria o pedido
+    $stmt = $db->prepare(
+        "INSERT INTO orders (service_id, client_id, total_price, status) VALUES (:service_id, :client_id, :total_price, :status)"
+    );
+    $stmt->execute([
+        ':service_id'  => $service_id,
+        ':client_id'   => $_SESSION['user_id'],
+        ':total_price' => $service['price'],
+        ':status'      => 'pending'
+    ]);
+
+    flash('Pedido criado com sucesso!', 'sucesso');
+    header('Location: ../pages/list_services.php');
+    exit();
+
+} catch (PDOException $e) {
+    flash('Erro ao criar pedido: ' . $e->getMessage(), 'erro');
+    header('Location: ../pages/list_services.php');
+    exit();
+}
+?>

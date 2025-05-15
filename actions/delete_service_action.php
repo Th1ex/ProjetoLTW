@@ -1,40 +1,55 @@
 <?php
-// actions/delete_service_action.php
-session_start();
-if (!isset($_SESSION['user_id'])) {
-    header('Location: ../pages/login.php');
-    exit();
-}
-
+require_once '../includes/security.php';
+require_once '../includes/auth.php';
+require_once '../includes/flash.php';
 require_once __DIR__ . '/../database/connection.php';
-$db = getConnection();
 
-$service_id = $_POST['service_id'] ?? null;
-if (!$service_id || !is_numeric($service_id)) {
-    die("ID de serviço inválido.");
-}
+session_start();
+require_login();
 
-// Verifica se o serviço é do user logado
-$stmt = $db->prepare("SELECT user_id FROM services WHERE service_id = :id");
-$stmt->execute([':id' => $service_id]);
-$service = $stmt->fetch();
-
-if (!$service) {
-    die("Serviço não encontrado.");
-}
-
-if ($service['user_id'] != $_SESSION['user_id']) {
-    die("Não tens permissão para excluir este serviço.");
-}
-
-// Se chegou aqui, pode excluir
-try {
-    $stmt = $db->prepare("DELETE FROM services WHERE service_id = :id");
-    $stmt->execute([':id' => $service_id]);
-
-    // Redireciona de volta para a lista de serviços
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    flash('Método inválido.', 'erro');
     header('Location: ../pages/my_services.php');
     exit();
-} catch (PDOException $e) {
-    die("Erro ao excluir serviço: " . $e->getMessage());
 }
+
+verify_csrf($_POST['csrf_token'] ?? '');
+
+$service_id = sanitize($_POST['service_id'] ?? '');
+if (empty($service_id) || !is_numeric($service_id)) {
+    flash('ID de serviço inválido.', 'erro');
+    header('Location: ../pages/my_services.php');
+    exit();
+}
+
+try {
+    $db = getConnection();
+
+    // Verifica se o serviço pertence ao usuário logado
+    $stmt = $db->prepare("SELECT user_id FROM services WHERE service_id = :id");
+    $stmt->execute([':id' => $service_id]);
+    $service = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$service) {
+        flash('Serviço não encontrado.', 'erro');
+        header('Location: ../pages/my_services.php');
+        exit();
+    }
+
+    if ($service['user_id'] != $_SESSION['user_id']) {
+        flash('Não tens permissão para excluir este serviço.', 'erro');
+        header('Location: ../pages/my_services.php');
+        exit();
+    }
+
+    // Excluir o serviço
+    $delStmt = $db->prepare("DELETE FROM services WHERE service_id = :id");
+    $delStmt->execute([':id' => $service_id]);
+
+    flash('Serviço excluído com sucesso!', 'sucesso');
+} catch (PDOException $e) {
+    flash('Erro ao excluir serviço: ' . $e->getMessage(), 'erro');
+}
+
+header('Location: ../pages/my_services.php');
+exit();

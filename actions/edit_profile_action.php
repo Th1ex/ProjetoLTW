@@ -1,59 +1,63 @@
 <?php
-// actions/edit_profile_action.php
+require_once '../includes/security.php';
+require_once '../includes/auth.php';
+require_once '../includes/flash.php';
+require_once '../includes/passwords.php';
+require_once __DIR__ . '/../database/connection.php';
 
-// Inicia a sessão
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+session_start();
+require_login();
 
-// Verifica se o usuário está logado
-if (!isset($_SESSION['user_id'])) {
-    header('Location: ../pages/login.php');
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    flash('Método inválido.', 'erro');
+    header('Location: ../pages/profile.php');
     exit();
 }
 
-require_once __DIR__ . '/../database/connection.php';
-$db = getConnection();
+verify_csrf($_POST['csrf_token'] ?? '');
 
-// Coleta os dados enviados pelo formulário
-$user_id    = $_POST['user_id'] ?? '';
-$name       = trim($_POST['name'] ?? '');
-$username   = trim($_POST['username'] ?? '');
-$email      = trim($_POST['email'] ?? '');
-$password   = $_POST['password'] ?? '';
+// Sanitizar inputs
+$user_id  = sanitize($_POST['user_id'] ?? '');
+$name     = sanitize($_POST['name'] ?? '');
+$username = sanitize($_POST['username'] ?? '');
+$email    = sanitize($_POST['email'] ?? '');
+$password = $_POST['password'] ?? '';
 
+// Validações básicas
 if (empty($user_id) || empty($name) || empty($username) || empty($email)) {
-    die("Preencha todos os campos necessários.");
+    flash('Preencha todos os campos necessários.', 'erro');
+    header('Location: ../pages/profile.php');
+    exit();
+}
+
+// Verifica se o ID corresponde ao utilizador logado
+if ($user_id != $_SESSION['user_id']) {
+    flash('ID de utilizador inválido.', 'erro');
+    header('Location: ../pages/profile.php');
+    exit();
 }
 
 try {
+    $db = getConnection();
+
     if (!empty($password)) {
-        // Se a senha foi informada, atualiza com novo hash
-        $passwordHash = password_hash($password, PASSWORD_DEFAULT);
-        $stmt = $db->prepare("
-            UPDATE users
-            SET name = :name,
-                username = :username,
-                email = :email,
-                password_hash = :password_hash
-            WHERE user_id = :user_id
-        ");
+        // Atualiza com nova password
+        $passwordHash = hash_password($password);
+        $stmt = $db->prepare(
+            "UPDATE users SET name = :name, username = :username, email = :email, password_hash = :password_hash WHERE user_id = :user_id"
+        );
         $stmt->execute([
-            ':name'         => $name,
-            ':username'     => $username,
-            ':email'        => $email,
-            ':password_hash'=> $passwordHash,
-            ':user_id'      => $user_id
+            ':name'          => $name,
+            ':username'      => $username,
+            ':email'         => $email,
+            ':password_hash' => $passwordHash,
+            ':user_id'       => $user_id
         ]);
     } else {
-        // Se o campo de senha estiver vazio, atualiza apenas os demais dados
-        $stmt = $db->prepare("
-            UPDATE users
-            SET name = :name,
-                username = :username,
-                email = :email
-            WHERE user_id = :user_id
-        ");
+        // Atualiza sem alterar password
+        $stmt = $db->prepare(
+            "UPDATE users SET name = :name, username = :username, email = :email WHERE user_id = :user_id"
+        );
         $stmt->execute([
             ':name'     => $name,
             ':username' => $username,
@@ -61,13 +65,17 @@ try {
             ':user_id'  => $user_id
         ]);
     }
-    
-    // Opcional: atualizar os dados na sessão, se necessário
+
+    // Sincroniza username na sessão
     $_SESSION['username'] = $username;
-    
-    // Redireciona de volta para a página de perfil
-    header("Location: ../pages/profile.php");
+
+    flash('Perfil atualizado com sucesso!', 'sucesso');
+    header('Location: ../pages/profile.php');
     exit();
+
 } catch (PDOException $e) {
-    die("Erro ao atualizar perfil: " . $e->getMessage());
+    flash('Erro ao atualizar perfil: ' . $e->getMessage(), 'erro');
+    header('Location: ../pages/profile.php');
+    exit();
 }
+?>

@@ -1,5 +1,6 @@
-<?php include_once '../templates/header.php'; ?>
-
+<?php
+require_once __DIR__ . '/../templates/header.php';
+?>
 <style>
   * {
     margin: 0;
@@ -82,4 +83,4 @@
 
 <footer>&copy; 2025 Talentum. All rights reserved.</footer>
 
-<?php include_once '../templates/footer.php'; ?>
+<?php require_once __DIR__ . '/../templates/footer.php'; ?>

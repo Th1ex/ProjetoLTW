@@ -1,11 +1,12 @@
-<?php include_once '../templates/header.php'; ?>
-
+<?php
+require_once __DIR__ . '/../templates/header.php';
+?>
 <style>
   body {
     margin: 0;
     padding: 0;
     font-family: 'Segoe UI', sans-serif;
-    background-image: url('../uploads/Background.png');
+    background-image: url('/uploads/Background.png');
     background-size: cover;
     background-position: center;
     min-height: 100vh;
@@ -97,6 +98,4 @@
   <a class="cta-button" href="register.php">Criar Conta</a>
 </div>
 
-
-
-<?php include_once '../templates/footer.php'; ?>
+<?php require_once __DIR__ . '/../templates/footer.php'; ?>

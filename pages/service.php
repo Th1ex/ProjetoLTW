@@ -1,63 +1,91 @@
 <?php
-require_once __DIR__ . '/../templates/header.php';
+require_once __DIR__ . '/../includes/security.php';
+require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/flash.php';
 require_once __DIR__ . '/../database/connection.php';
-$db = getConnection();
 
-$service_id = $_GET['id']??'';
-if(!is_numeric($service_id)) die('ID inválido');
+require_login();
 
-$stmt=$db->prepare("
-  SELECT s.*, c.category_name, u.username
-  FROM services s
-  JOIN categories c ON s.category_id = c.category_id
-  JOIN users u ON s.user_id = u.user_id
-  WHERE s.service_id = :sid
-");
-$stmt->execute([':sid'=>$service_id]);
-$svc=$stmt->fetch();
-if(!$svc) die('Serviço não encontrado');
+// Sanitizar service_id
+$service_id = sanitize($_GET['id'] ?? '');
+if (empty($service_id) || !is_numeric($service_id)) {
+    flash('ID inválido.', 'erro');
+    header('Location: ../pages/list_services.php');
+    exit();
+}
+
+try {
+    $db = getConnection();
+
+    // Busca serviço
+    $stmt = $db->prepare(
+        "SELECT s.*, c.category_name, u.username
+         FROM services s
+         JOIN categories c ON s.category_id = c.category_id
+         JOIN users u ON s.user_id = u.user_id
+         WHERE s.service_id = :sid"
+    );
+    $stmt->execute([':sid' => $service_id]);
+    $svc = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$svc) {
+        flash('Serviço não encontrado.', 'erro');
+        header('Location: ../pages/list_services.php');
+        exit();
+    }
+
+    // Busca mídia
+    $medStmt = $db->prepare(
+        "SELECT file_name, media_type FROM service_media WHERE service_id = :sid ORDER BY media_id"
+    );
+    $medStmt->execute([':sid' => $service_id]);
+    $media = $medStmt->fetchAll(PDO::FETCH_ASSOC);
+
+} catch (PDOException $e) {
+    flash('Erro ao carregar serviço: ' . $e->getMessage(), 'erro');
+    header('Location: ../pages/list_services.php');
+    exit();
+}
+
+require_once __DIR__ . '/../templates/header.php';
 ?>
-
 <div class="service-container">
-    <h2><?=htmlspecialchars($svc['title'])?></h2>
-    <p><b>Freelancer:</b> <?=htmlspecialchars($svc['username'])?></p>
-    <p><b>Categoria:</b> <?=htmlspecialchars($svc['category_name'])?></p>
-    <p><b>Preço:</b> <?=htmlspecialchars($svc['price'])?> €</p>
-    <p><b>Entrega:</b> <?=htmlspecialchars($svc['delivery_time'])?> dias</p>
+    <h2><?= escape($svc['title']) ?></h2>
+    <p><strong>Freelancer:</strong> <?= escape($svc['username']) ?></p>
+    <p><strong>Categoria:</strong> <?= escape($svc['category_name']) ?></p>
+    <p><strong>Preço:</strong> € <?= escape(number_format($svc['price'],2,',','.')) ?></p>
+    <p><strong>Entrega:</strong> <?= escape($svc['delivery_time']) ?> dias</p>
 
     <h3>Galeria</h3>
+    <div class="media-gallery">
     <?php
-    $med=$db->prepare("
-    SELECT file_name,media_type FROM service_media
-    WHERE service_id = :sid ORDER BY media_id
-    ");
-    $med->execute([':sid'=>$service_id]);
-    $any=false;
-    foreach($med as $m){
-        $any=true;
-        $src='../uploads/'.htmlspecialchars($m['file_name']);
-        if($m['media_type']=='image'){
-            echo "<img src=\"$src\" style=\"max-width:250px;margin:5px\">";
-        }else{
-            echo "<video src=\"$src\" controls style=\"max-width:250px;margin:5px\"></video>";
+    $any = false;
+    foreach ($media as $m) {
+        $any = true;
+        $src = '../uploads/' . escape($m['file_name']);
+        if ($m['media_type'] === 'image') {
+            echo "<img src=\"{$src}\" style=\"max-width:250px;margin:5px\">";
+        } else {
+            echo "<video src=\"{$src}\" controls style=\"max-width:250px;margin:5px\"></video>";
         }
     }
-    /* compatibilidade – mostra imagem antiga se não houver media */
-    if(!$any && $svc['image']){
-        $src='../uploads/'.htmlspecialchars($svc['image']);
-        echo "<img src=\"$src\" style=\"max-width:250px;margin:5px\">";
+    if (!$any && !empty($svc['image'])) {
+        $src = '../uploads/' . escape($svc['image']);
+        echo "<img src=\"{$src}\" style=\"max-width:250px;margin:5px\">";
     }
     ?>
+    </div>
 
     <h3>Descrição</h3>
-    <p><?=nl2br(htmlspecialchars($svc['description']))?></p>
+    <p><?= nl2br(escape($svc['description'])) ?></p>
 
-    <?php if(isset($_SESSION['user_id'])&&$_SESSION['user_id']!=$svc['user_id']):?>
-    <form action="../actions/hire_service_action.php" method="post">
-    <input type="hidden" name="service_id" value="<?=$service_id?>">
-    <button type="submit">Contratar</button>
+    <?php if (isset($_SESSION['user_id']) && $_SESSION['user_id'] != $svc['user_id']): ?>
+    <form action="../actions/hire_service_action.php" method="post" class="inline-form">
+        <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
+        <input type="hidden" name="service_id" value="<?= escape($service_id) ?>">
+        <button type="submit">Contratar</button>
     </form>
-    <a href="messages_chat.php?user=<?=$svc['user_id']?>">Enviar Mensagem</a>
+    <a href="messages_chat.php?user=<?= escape($svc['user_id']) ?>">Enviar Mensagem</a>
     <?php endif; ?>
 </div>
 

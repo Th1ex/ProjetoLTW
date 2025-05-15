@@ -1,41 +1,40 @@
 <?php
-// pages/my_services.php
+require_once __DIR__ . '/../includes/security.php';
+require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/flash.php';
+require_once __DIR__ . '/../database/connection.php';
 
-session_start();
-if (!isset($_SESSION['user_id'])) {
-    header('Location: login.php');
-    exit();
+require_login();
+
+try {
+    $db = getConnection();
+    $user_id = $_SESSION['user_id'];
+
+    $stmt = $db->prepare(
+        "SELECT 
+            service_id,
+            title,
+            price,
+            delivery_time,
+            category_name
+         FROM services
+         JOIN categories ON services.category_id = categories.category_id
+         WHERE services.user_id = :user_id
+         ORDER BY services.created_at DESC"
+    );
+    $stmt->execute([':user_id' => $user_id]);
+    $services = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    flash('Erro ao carregar serviços: ' . $e->getMessage(), 'erro');
+    $services = [];
 }
 
 require_once __DIR__ . '/../templates/header.php';
-require_once __DIR__ . '/../database/connection.php';
-
-$db = getConnection();
-
-// Obtém o ID do utilizador logado
-$user_id = $_SESSION['user_id'];
-
-// Faz SELECT na tabela services, filtrando pelo user_id
-$stmt = $db->prepare("
-    SELECT 
-        services.service_id,
-        services.title,
-        services.price,
-        services.delivery_time,
-        categories.category_name
-    FROM services
-    JOIN categories ON services.category_id = categories.category_id
-    WHERE services.user_id = :user_id
-    ORDER BY services.created_at DESC
-");
-
-$stmt->execute([':user_id' => $user_id]);
-$services = $stmt->fetchAll();
 ?>
 <div class="my-services-page">
     <h2>Meus Serviços</h2>
 
-    <?php if (count($services) === 0): ?>
+    <?php if (empty($services)): ?>
         <p>Não tens serviços cadastrados.</p>
     <?php else: ?>
         <table>
@@ -51,20 +50,17 @@ $services = $stmt->fetchAll();
             <tbody>
                 <?php foreach ($services as $service): ?>
                     <tr>
-                        <td><?= htmlspecialchars($service['title']) ?></td>
-                        <td><?= htmlspecialchars($service['category_name']) ?></td>
-                        <td><?= htmlspecialchars($service['price']) ?> €</td>
-                        <td><?= htmlspecialchars($service['delivery_time']) ?></td>
+                        <td><?= escape($service['title']) ?></td>
+                        <td><?= escape($service['category_name']) ?></td>
+                        <td>€ <?= escape(number_format($service['price'], 2, ',', '.')) ?></td>
+                        <td><?= escape($service['delivery_time']) ?></td>
                         <td>
-                            <!-- Link para página de edição -->
-                            <a href="edit_service.php?id=<?= $service['service_id'] ?>">Editar</a> 
+                            <a href="edit_service.php?id=<?= escape($service['service_id']) ?>">Editar</a>
                             |
-                            <!-- Form para excluir serviço -->
-                            <form action="../actions/delete_service_action.php" method="post" style="display:inline;">
-                                <input type="hidden" name="service_id" value="<?= $service['service_id'] ?>">
-                                <button type="submit" onclick="return confirm('Tem certeza que deseja excluir este serviço?');">
-                                    Excluir
-                                </button>
+                            <form action="../actions/delete_service_action.php" method="post" class="inline-form" onsubmit="return confirm('Tem certeza que deseja excluir este serviço?');">
+                                <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
+                                <input type="hidden" name="service_id" value="<?= escape($service['service_id']) ?>">
+                                <button type="submit">Excluir</button>
                             </form>
                         </td>
                     </tr>
@@ -73,4 +69,5 @@ $services = $stmt->fetchAll();
         </table>
     <?php endif; ?>
 </div>
+
 <?php require_once __DIR__ . '/../templates/footer.php'; ?>

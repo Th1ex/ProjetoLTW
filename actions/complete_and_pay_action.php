@@ -1,75 +1,74 @@
 <?php
-// actions/complete_and_pay_action.php
+require_once '../includes/security.php';
+require_once '../includes/auth.php';
+require_once '../includes/flash.php';
+require_once __DIR__ . '/../database/connection.php';
 
 session_start();
-if (!isset($_SESSION['user_id'])) {
-    header('Location: ../pages/login.php');
+require_login();
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    flash('Método inválido.', 'erro');
+    header('Location: ../pages/my_orders.php');
     exit();
 }
 
-require_once __DIR__ . '/../database/connection.php';
-$db = getConnection();
+verify_csrf($_POST['csrf_token'] ?? '');
 
-$order_id = $_POST['order_id'] ?? null;
-if (!$order_id || !is_numeric($order_id)) {
-    die('ID de pedido inválido.');
+$order_id = sanitize($_POST['order_id'] ?? '');
+if (empty($order_id) || !is_numeric($order_id)) {
+    flash('ID de pedido inválido.', 'erro');
+    header('Location: ../pages/my_orders.php');
+    exit();
 }
 
-/* Busca pedido + freelancer + valor, garantindo que pertence ao cliente logado */
-$stmt = $db->prepare("
-    SELECT 
-        o.status,
-        o.total_price,
-        s.user_id AS freelancer_id
-    FROM orders o
-    JOIN services s ON o.service_id = s.service_id
-    WHERE o.order_id = :oid
-      AND o.client_id = :cid
-");
+$db = getConnection();
+
+$stmt = $db->prepare("SELECT o.status, o.total_price, s.user_id AS freelancer_id FROM orders o JOIN services s ON o.service_id = s.service_id WHERE o.order_id = :oid AND o.client_id = :cid");
 $stmt->execute([
     ':oid' => $order_id,
     ':cid' => $_SESSION['user_id']
 ]);
-$order = $stmt->fetch();
+$order = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$order) {
-    die('Pedido não encontrado ou não pertence ao usuário.');
+    flash('Pedido não encontrado ou não pertence ao usuário.', 'erro');
+    header('Location: ../pages/my_orders.php');
+    exit();
 }
 
 if ($order['status'] !== 'completed') {
-    die('Este pedido ainda não foi concluído pelo freelancer.');
+    flash('Este pedido ainda não foi concluído pelo freelancer.', 'erro');
+    header('Location: ../pages/my_orders.php');
+    exit();
 }
 
 $freelancerId = $order['freelancer_id'];
-$valor        = $order['total_price'];
+$valor = $order['total_price'];
 
-/* Transação: 1) muda status para 'closed'; 2) credita carteira do freelancer */
 try {
     $db->beginTransaction();
 
-    /* 1. Atualiza status */
-    $db->prepare("
-        UPDATE orders
-        SET status = 'closed'
-        WHERE order_id = :oid
-    ")->execute([':oid' => $order_id]);
+    $updateOrder = $db->prepare("UPDATE orders SET status = 'closed' WHERE order_id = :oid");
+    $updateOrder->execute([':oid' => $order_id]);
 
-    /* 2. Credita saldo */
-    $db->prepare("
-        UPDATE users
-        SET wallet = wallet + :valor
-        WHERE user_id = :fid
-    ")->execute([
+    $updateWallet = $db->prepare("UPDATE users SET wallet = wallet + :valor WHERE user_id = :fid");
+    $updateWallet->execute([
         ':valor' => $valor,
-        ':fid'   => $freelancerId
+        ':fid' => $freelancerId
     ]);
 
     $db->commit();
 
+    flash('Pagamento processado e saldo do freelancer atualizado com sucesso!', 'sucesso');
+    header('Location: ../pages/my_orders.php');
+    exit();
 } catch (PDOException $e) {
-    $db->rollBack();
-    die('Erro na transação: ' . $e->getMessage());
+    if ($db->inTransaction()) {
+        $db->rollBack();
+    }
+    flash('Erro na transação: ' . $e->getMessage(), 'erro');
+    header('Location: ../pages/my_orders.php');
+    exit();
 }
-
-header('Location: ../pages/my_orders.php');
-exit();
+?>

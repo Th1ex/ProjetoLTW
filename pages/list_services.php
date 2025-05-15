@@ -1,23 +1,26 @@
 <?php
-require_once __DIR__ . '/../templates/header.php';
+require_once __DIR__ . '/../includes/security.php';
+require_once __DIR__ . '/../includes/flash.php';
 require_once __DIR__ . '/../database/connection.php';
+
+
 $db = getConnection();
 
-/* ── parâmetros de filtro ─────────────────────────────────────── */
-$searchQuery    = trim($_GET['q'] ?? '');
-$filterCategory =       $_GET['category_id'] ?? '';
-$minPrice       =       $_GET['min_price']   ?? '';
-$maxPrice       =       $_GET['max_price']   ?? '';
-$minRating      =       $_GET['min_rating']  ?? '';
+// Sanitizar filtros de busca
+$searchQuery    = sanitize($_GET['q'] ?? '');
+$filterCategory = sanitize($_GET['category_id'] ?? '');
+$minPrice       = sanitize($_GET['min_price'] ?? '');
+$maxPrice       = sanitize($_GET['max_price'] ?? '');
+$minRating      = sanitize($_GET['min_rating'] ?? '');
 
-/* ── query base + média de rating ─────────────────────────────── */
+// Construir query
 $sql = "
  SELECT s.service_id, s.title, s.price, s.image,
-        s.user_id owner_id,
+        s.user_id AS owner_id,
         c.category_name,
-        u.username freelancer_name,
+        u.username AS freelancer_name,
         s.created_at,
-        COALESCE(AVG(r.rating),0) avg_rating
+        COALESCE(AVG(r.rating),0) AS avg_rating
  FROM services s
  JOIN categories c ON s.category_id = c.category_id
  JOIN users      u ON s.user_id     = u.user_id
@@ -26,45 +29,47 @@ $sql = "
  WHERE 1=1";
 $params = [];
 
-/* texto */
-if ($searchQuery !== '') {
-    $sql .= " AND (s.title LIKE :q OR s.description LIKE :q) ";
-    $params[':q'] = "%$searchQuery%";
+if (!empty($searchQuery)) {
+    $sql .= " AND (s.title LIKE :q OR s.description LIKE :q)";
+    $params[':q'] = "%{$searchQuery}%";
 }
-
-/* categoria */
-if ($filterCategory !== '') {
-    $sql .= " AND s.category_id = :cat ";
+if (!empty($filterCategory) && is_numeric($filterCategory)) {
+    $sql .= " AND s.category_id = :cat";
     $params[':cat'] = $filterCategory;
 }
-
-/* preço */
 if ($minPrice !== '' && is_numeric($minPrice)) {
-    $sql .= " AND s.price >= :minp "; $params[':minp'] = $minPrice;
+    $sql .= " AND s.price >= :minp";
+    $params[':minp'] = $minPrice;
 }
 if ($maxPrice !== '' && is_numeric($maxPrice)) {
-    $sql .= " AND s.price <= :maxp "; $params[':maxp'] = $maxPrice;
+    $sql .= " AND s.price <= :maxp";
+    $params[':maxp'] = $maxPrice;
 }
 
-/* rating */
-$sql .= " GROUP BY s.service_id ";
+$sql .= " GROUP BY s.service_id";
 if ($minRating !== '' && is_numeric($minRating)) {
-    $sql .= " HAVING COALESCE(AVG(r.rating),0) >= ".(float)$minRating." ";
+    $sql .= " HAVING COALESCE(AVG(r.rating),0) >= :minr";
+    $params[':minr'] = $minRating;
 }
 
 $sql .= " ORDER BY s.created_at DESC";
 
-$stmt=$db->prepare($sql);
+$stmt = $db->prepare($sql);
 $stmt->execute($params);
-$services=$stmt->fetchAll();
+$services = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-/* lista de categorias para o <select> */
-$categories = $db->query("
-  SELECT category_id, category_name
-  FROM categories ORDER BY category_name
-")->fetchAll();
+// Carregar categorias
+try {
+    $catStmt = $db->prepare("SELECT category_id, category_name FROM categories ORDER BY category_name");
+    $catStmt->execute();
+    $categories = $catStmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    flash('Erro ao carregar categorias: ' . $e->getMessage(), 'erro');
+    $categories = [];
+}
+
+require_once __DIR__ . '/../templates/header.php';
 ?>
-
 <div class="page-logo">
   <img src="../uploads/Logo.png" alt="Talentum Logo">
 </div>
@@ -72,40 +77,38 @@ $categories = $db->query("
 <div class="filter-container">
   <form action="list_services.php" method="get" class="filter-form">
     <div class="form-group">
-      <label>Pesquisar</label>
-      <input type="text" name="q" value="<?= htmlspecialchars($searchQuery) ?>" placeholder="Título ou descrição...">
+      <label for="q">Pesquisar</label>
+      <input type="text" id="q" name="q" value="<?= escape($searchQuery) ?>" placeholder="Título ou descrição...">
     </div>
 
     <div class="form-group">
-      <label>Categoria</label>
-      <select name="category_id">
+      <label for="category_id">Categoria</label>
+      <select name="category_id" id="category_id">
         <option value="">Todas</option>
-        <?php foreach ($categories as $c):
-              $sel = $filterCategory == $c['category_id'] ? 'selected' : ''; ?>
-          <option value="<?= $c['category_id'] ?>" <?= $sel ?>>
-            <?= htmlspecialchars($c['category_name']) ?>
+        <?php foreach ($categories as $c): ?>
+          <option value="<?= escape($c['category_id']) ?>" <?= $filterCategory == $c['category_id'] ? 'selected' : '' ?>>
+            <?= escape($c['category_name']) ?>
           </option>
         <?php endforeach; ?>
       </select>
     </div>
 
     <div class="form-group">
-      <label>Preço Mín.</label>
-      <input type="number" step="0.01" name="min_price" value="<?= htmlspecialchars($minPrice) ?>">
+      <label for="min_price">Preço Mín.</label>
+      <input type="number" step="0.01" id="min_price" name="min_price" value="<?= escape($minPrice) ?>">
     </div>
 
     <div class="form-group">
-      <label>Preço Máx.</label>
-      <input type="number" step="0.01" name="max_price" value="<?= htmlspecialchars($maxPrice) ?>">
+      <label for="max_price">Preço Máx.</label>
+      <input type="number" step="0.01" id="max_price" name="max_price" value="<?= escape($maxPrice) ?>">
     </div>
 
     <div class="form-group">
-      <label>Rating mín.</label>
-      <select name="min_rating">
+      <label for="min_rating">Rating mín.</label>
+      <select name="min_rating" id="min_rating">
         <option value="">—</option>
-        <?php for ($r = 5; $r >= 1; $r--):
-              $sel = ($minRating == $r ? 'selected' : ''); ?>
-          <option value="<?= $r ?>" <?= $sel ?>><?= $r ?>+</option>
+        <?php for ($r = 5; $r >= 1; $r--): ?>
+          <option value="<?= $r ?>" <?= $minRating == $r ? 'selected' : '' ?>><?= $r ?>+</option>
         <?php endfor; ?>
       </select>
     </div>
@@ -117,37 +120,37 @@ $categories = $db->query("
   </form>
 </div>
 
-<?php if (!$services): ?>
+<?php if (empty($services)): ?>
   <p style="text-align:center;">Nenhum serviço encontrado.</p>
 <?php else: ?>
 <div class="services-grid">
   <?php foreach ($services as $s): ?>
     <div class="service-card">
       <div class="service-image">
-        <?php if ($s['image']): ?>
-          <img src="../uploads/<?= htmlspecialchars($s['image']) ?>" alt="Imagem do serviço">
+        <?php if (!empty($s['image'])): ?>
+          <img src="../uploads/<?= escape($s['image']) ?>" alt="Imagem do serviço">
         <?php else: ?>
           <div class="image-placeholder">Sem imagem</div>
         <?php endif; ?>
       </div>
 
       <div class="service-info">
-        <h3><?= htmlspecialchars($s['title']) ?></h3>
-        <p class="category"><?= htmlspecialchars($s['category_name']) ?></p>
-        <p class="freelancer">Por <strong><?= htmlspecialchars($s['freelancer_name']) ?></strong></p>
-        <p class="price">€ <?= htmlspecialchars($s['price']) ?></p>
-        <p class="rating">⭐ <?= $s['avg_rating'] ? number_format($s['avg_rating'], 1) : '—' ?></p>
-        <p class="date"><?= date('Y-m-d', strtotime($s['created_at'])) ?></p>
+        <h3><?= escape($s['title']) ?></h3>
+        <p class="category"><?= escape($s['category_name']) ?></p>
+        <p class="freelancer">Por <strong><?= escape($s['freelancer_name']) ?></strong></p>
+        <p class="price">€ <?= escape(number_format($s['price'], 2, ',', '.')) ?></p>
+        <p class="rating">⭐ <?= $s['avg_rating'] ? escape(number_format($s['avg_rating'], 1)) : '—' ?></p>
+        <p class="date"><?= escape(date('Y-m-d', strtotime($s['created_at']))) ?></p>
 
         <div class="actions">
-          <a class="button" href="service.php?id=<?= $s['service_id'] ?>">Detalhes</a>
-
+          <a class="button" href="service.php?id=<?= escape($s['service_id']) ?>">Detalhes</a>
           <?php if (isset($_SESSION['user_id']) && $_SESSION['user_id'] != $s['owner_id']): ?>
             <form action="../actions/hire_service_action.php" method="post" class="inline-form">
-              <input type="hidden" name="service_id" value="<?= $s['service_id'] ?>">
+              <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
+              <input type="hidden" name="service_id" value="<?= escape($s['service_id']) ?>">
               <button type="submit" class="button">Contratar</button>
             </form>
-            <a class="button" href="messages_chat.php?user=<?= $s['owner_id'] ?>">Mensagem</a>
+            <a class="button" href="messages_chat.php?user=<?= escape($s['owner_id']) ?>">Mensagem</a>
           <?php endif; ?>
         </div>
       </div>

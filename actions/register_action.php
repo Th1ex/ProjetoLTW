@@ -1,51 +1,75 @@
 <?php
-session_start();
+require_once '../includes/security.php';
+require_once '../includes/flash.php';
+require_once '../includes/passwords.php';
 require_once __DIR__ . '/../database/connection.php';
 
-$db = getConnection();
+session_start();
 
-$name     = trim($_POST['name'] ?? '');
-$username = trim($_POST['username'] ?? '');
-$email    = trim($_POST['email'] ?? '');
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    flash('Método inválido.', 'erro');
+    header('Location: ../pages/register.php');
+    exit();
+}
+
+verify_csrf($_POST['csrf_token'] ?? '');
+
+// Sanitizar inputs
+$name     = sanitize($_POST['name'] ?? '');
+$username = sanitize($_POST['username'] ?? '');
+$email    = sanitize($_POST['email'] ?? '');
 $password = $_POST['password'] ?? '';
 
-// Valida se há campos obrigatórios vazios
+// Validação
 if (empty($name) || empty($username) || empty($email) || empty($password)) {
-    // Em produção, pode redirecionar de volta com mensagem de erro
-    die('Preencha todos os campos obrigatórios.');
+    flash('Preencha todos os campos obrigatórios.', 'erro');
+    header('Location: ../pages/register.php');
+    exit();
 }
 
 try {
+    $db = getConnection();
+
     // Verifica se username ou email já existem
-    $stmt = $db->prepare("SELECT COUNT(*) as count FROM users WHERE username = :username OR email = :email");
+    $stmt = $db->prepare(
+        "SELECT COUNT(*) as count FROM users WHERE username = :username OR email = :email"
+    );
     $stmt->execute([':username' => $username, ':email' => $email]);
-    $result = $stmt->fetch();
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if ($result['count'] > 0) {
-        die('Username ou email já registado.');
+        flash('Username ou email já registado.', 'erro');
+        header('Location: ../pages/register.php');
+        exit();
     }
 
-    // Gera o hash seguro da senha
-    $passwordHash = password_hash($password, PASSWORD_DEFAULT);
+    // Gera hash de password
+    $passwordHash = hash_password($password);
 
-    $stmt = $db->prepare("INSERT INTO users (username, password_hash, email, name) 
-                          VALUES (:username, :password_hash, :email, :name)");
+    // Inserir utilizador
+    $stmt = $db->prepare(
+        "INSERT INTO users (username, password_hash, email, name) VALUES (:username, :password_hash, :email, :name)"
+    );
     $stmt->execute([
-        ':username' => $username,
+        ':username'      => $username,
         ':password_hash' => $passwordHash,
-        ':email' => $email,
-        ':name' => $name
+        ':email'         => $email,
+        ':name'          => $name
     ]);
 
-    // Podes criar uma sessão de login automático após registo, se quiseres
+    // Login automático após registo
     $user_id = $db->lastInsertId();
-    $_SESSION['user_id'] = $user_id;
+    $_SESSION['user_id']  = $user_id;
     $_SESSION['username'] = $username;
+    $_SESSION['is_admin'] = 0;
 
-    // Redireciona para a home ou para o perfil
-    header('Location: ../pages/login.php');
+    flash('Registo efetuado com sucesso! Bem-vindo(a)!', 'sucesso');
+    header('Location: ../pages/list_services.php');
     exit();
 
 } catch (PDOException $e) {
-    die('Erro ao registar utilizador: ' . $e->getMessage());
+    flash('Erro ao registar utilizador: ' . $e->getMessage(), 'erro');
+    header('Location: ../pages/register.php');
+    exit();
 }
+?>

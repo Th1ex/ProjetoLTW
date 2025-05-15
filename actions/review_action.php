@@ -1,65 +1,91 @@
 <?php
+require_once '../includes/security.php';
+require_once '../includes/auth.php';
+require_once '../includes/flash.php';
+require_once __DIR__ . '/../database/connection.php';
+
 session_start();
-if (!isset($_SESSION['user_id'])) {
-    header('Location: ../pages/login.php');
+require_login();
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    flash('Método inválido.', 'erro');
+    header('Location: ../pages/my_orders.php');
     exit();
 }
 
-require_once __DIR__ . '/../database/connection.php';
-$db = getConnection();
+verify_csrf($_POST['csrf_token'] ?? '');
 
-$order_id = $_POST['order_id'] ?? null;
-$rating   = $_POST['rating'] ?? null;
-$comment  = trim($_POST['comment'] ?? '');
+// Sanitizar inputs
+$order_id = sanitize($_POST['order_id'] ?? '');
+$rating   = sanitize($_POST['rating'] ?? '');
+$comment  = sanitize($_POST['comment'] ?? '');
 
-if (!$order_id || !is_numeric($order_id)) {
-    die("ID do pedido inválido.");
+// Validações
+if (empty($order_id) || !is_numeric($order_id)) {
+    flash('ID do pedido inválido.', 'erro');
+    header('Location: ../pages/my_orders.php');
+    exit();
 }
-if (!$rating || !is_numeric($rating) || $rating < 1 || $rating > 5) {
-    die("Nota de avaliação inválida.");
-}
-
-// Verifica se o pedido existe e pertence ao user logado, e status = completed
-$stmt = $db->prepare("
-    SELECT client_id, status 
-    FROM orders 
-    WHERE order_id = :oid
-");
-$stmt->execute([':oid' => $order_id]);
-$order = $stmt->fetch();
-
-if (!$order) {
-    die("Pedido não encontrado.");
-}
-if ($order['client_id'] != $_SESSION['user_id']) {
-    die("Não tens permissão para avaliar este pedido.");
-}
-if ($order['status'] !== 'closed') {
-    die("Só é possível avaliar pedidos acabados.");
+if (empty($rating) || !is_numeric($rating) || $rating < 1 || $rating > 5) {
+    flash('Nota de avaliação inválida.', 'erro');
+    header('Location: ../pages/my_orders.php');
+    exit();
 }
 
-// Verifica se já existe review
-$stmtRev = $db->prepare("SELECT review_id FROM reviews WHERE order_id = :oid");
-$stmtRev->execute([':oid' => $order_id]);
-if ($stmtRev->fetch()) {
-    die("Este pedido já foi avaliado.");
-}
-
-// Insere a review
 try {
-    $stmt = $db->prepare("
-        INSERT INTO reviews (order_id, rating, comment)
-        VALUES (:order_id, :rating, :comment)
-    ");
-    $stmt->execute([
+    $db = getConnection();
+
+    // Verificar pedido
+    $stmt = $db->prepare(
+        "SELECT client_id, status FROM orders WHERE order_id = :oid"
+    );
+    $stmt->execute([':oid' => $order_id]);
+    $order = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$order) {
+        flash('Pedido não encontrado.', 'erro');
+        header('Location: ../pages/my_orders.php');
+        exit();
+    }
+    if ($order['client_id'] != $_SESSION['user_id']) {
+        flash('Não tens permissão para avaliar este pedido.', 'erro');
+        header('Location: ../pages/my_orders.php');
+        exit();
+    }
+    if ($order['status'] !== 'closed') {
+        flash('Só é possível avaliar pedidos acabados.', 'erro');
+        header('Location: ../pages/my_orders.php');
+        exit();
+    }
+
+    // Verificar existência de review
+    $stmtRev = $db->prepare(
+        "SELECT review_id FROM reviews WHERE order_id = :oid"
+    );
+    $stmtRev->execute([':oid' => $order_id]);
+    if ($stmtRev->fetch(PDO::FETCH_ASSOC)) {
+        flash('Este pedido já foi avaliado.', 'erro');
+        header('Location: ../pages/my_orders.php');
+        exit();
+    }
+
+    // Inserir avaliação
+    $stmtIns = $db->prepare(
+        "INSERT INTO reviews (order_id, rating, comment) VALUES (:order_id, :rating, :comment)"
+    );
+    $stmtIns->execute([
         ':order_id' => $order_id,
         ':rating'   => $rating,
         ':comment'  => $comment
     ]);
 
-    // Redireciona de volta para "Meus Pedidos" ou onde preferires
+    flash('Avaliação inserida com sucesso!', 'sucesso');
     header('Location: ../pages/my_orders.php');
     exit();
+
 } catch (PDOException $e) {
-    die("Erro ao inserir avaliação: " . $e->getMessage());
+    flash('Erro ao inserir avaliação: ' . $e->getMessage(), 'erro');
+    header('Location: ../pages/my_orders.php');
+    exit();
 }
+?>

@@ -1,5 +1,17 @@
-<?php include_once '../templates/header.php'; ?>
+<?php
+require_once __DIR__ . '/../includes/security.php';
+require_once __DIR__ . '/../includes/flash.php';
+require_once __DIR__ . '/../database/connection.php';
 
+session_start();
+// Redireciona se já estiver logado
+if (isset($_SESSION['user_id'])) {
+    header('Location: list_services.php');
+    exit();
+}
+
+require_once __DIR__ . '/../templates/header.php';
+?>
 <style>
   * {
     margin: 0;
@@ -34,34 +46,32 @@
     color: #d9d6ff;
   }
 
-  .register-container input {
+  .register-container input,
+  .register-container button {
     width: 100%;
     padding: 12px;
     margin-bottom: 15px;
     border: none;
     border-radius: 8px;
-    background-color: #2e2b4f;
-    color: #fff;
     font-size: 1rem;
+    box-sizing: border-box;
   }
 
+  .register-container input {
+    background-color: #2e2b4f;
+    color: #fff;
+  }
   .register-container input::placeholder {
     color: #aaa;
   }
 
   .register-container button {
-    width: 100%;
-    padding: 12px;
     background-color: #7744dd;
-    border: none;
-    border-radius: 8px;
-    font-size: 1rem;
     font-weight: bold;
     color: #fff;
     cursor: pointer;
     transition: 0.3s;
   }
-
   .register-container button:hover {
     background-color: #5f3dc4;
   }
@@ -76,7 +86,6 @@
     text-decoration: none;
     font-weight: bold;
   }
-
   .register-container a:hover {
     text-decoration: underline;
   }
@@ -84,7 +93,8 @@
 
 <div class="register-container">
   <h2>Criar Conta</h2>
-  <form action="../actions/register_action.php" method="POST">
+  <form action="../actions/register_action.php" method="POST" class="register-form">
+    <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
     <input type="text" name="name" placeholder="Nome Completo" required />
     <input type="text" name="username" placeholder="Username" required />
     <input type="email" name="email" placeholder="Email" required />
@@ -95,4 +105,4 @@
   <p>Já tens conta? <a href="login.php">Entra aqui</a></p>
 </div>
 
-<?php include_once '../templates/footer.php'; ?>
+<?php require_once __DIR__ . '/../templates/footer.php'; ?>

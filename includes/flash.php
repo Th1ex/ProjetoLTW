@@ -1,17 +1,30 @@
 <?php
-/*  Uso:
-    set_flash('error', 'Texto da mensagem');
-    set_flash('success', 'Feito com sucesso');
-    // depois faz header('Location: …');
-*/
-function set_flash(string $type, string $msg): void {
-    $_SESSION['flash'] = ['type'=>$type, 'msg'=>$msg];
+// includes/flash.php
+// Gerencia mensagens flash usando sessão
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
 }
-/* imprime e apaga a mensagem, se existir */
-function flash(): void {
-    if (!empty($_SESSION['flash'])) {
-        $f = $_SESSION['flash'];
-        unset($_SESSION['flash']);
-        echo "<div class='flash {$f['type']}'>{$f['msg']}</div>";
+
+/**
+ * Adiciona uma mensagem flash para ser exibida.
+ *
+ * @param string $message Texto da mensagem
+ * @param string $type Tipo da mensagem (e.g., 'success', 'error', 'info')
+ */
+function flash(string $message, string $type = 'info'): void {
+    $_SESSION['flashes'][] = ['type' => $type, 'message' => $message];
+}
+
+/**
+ * Retorna todas as mensagens flash pendentes e limpa a sessão.
+ *
+ * @return array Lista de mensagens ['type' => ..., 'message' => ...]
+ */
+function get_flashes(): array {
+    if (empty($_SESSION['flashes'])) {
+        return [];
     }
+    $flashes = $_SESSION['flashes'];
+    unset($_SESSION['flashes']);
+    return $flashes;
 }
