@@ -1,16 +1,10 @@
 <?php
 // actions/add_service_action.php
-session_start();
-if (!isset($_SESSION['user_id'])) {
-    header('Location: ../pages/login.php');
-    exit();
-}
+
+require_once __DIR__ . '/../includes/security.php';
+require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/flash.php';
 require_once __DIR__ . '/../database/connection.php';
-<?php
-require_once '../includes/security.php';
-require_once '../includes/auth.php';
-require_once '../includes/flash.php';
-require_once '../database/connection.php';
 
 session_start();
 require_login();
@@ -37,9 +31,11 @@ if (empty($title) || empty($description) || empty($price) || empty($delivery_tim
 }
 
 try {
-    // 1) Inserir serviço (imagem inicial fica null)
-    $stmt = $conn->prepare(
-        "INSERT INTO services (user_id, category_id, title, description, price, delivery_time, image) VALUES (:uid, :cid, :t, :d, :p, :days, NULL)"
+    $db = getConnection();
+    // 1) Inserir serviço (imagem inicial null)
+    $stmt = $db->prepare(
+        "INSERT INTO services (user_id, category_id, title, description, price, delivery_time, image)
+         VALUES (:uid, :cid, :t, :d, :p, :days, NULL)"
     );
     $stmt->execute([
         ':uid'   => $_SESSION['user_id'],
@@ -49,13 +45,11 @@ try {
         ':p'     => $price,
         ':days'  => $delivery_time
     ]);
-    $serviceId = $conn->lastInsertId();
+    $serviceId = $db->lastInsertId();
 
     // 2) Processar uploads múltiplos
     $uploadDir = __DIR__ . '/../uploads/';
-    if (!is_dir($uploadDir)) {
-        mkdir($uploadDir, 0755, true);
-    }
+    if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
 
     $imageMini = null;
     if (!empty($_FILES['files']['name']) && is_array($_FILES['files']['name'])) {
@@ -63,19 +57,17 @@ try {
             $tmp = $_FILES['files']['tmp_name'][$i] ?? null;
             if (!$tmp || !is_uploaded_file($tmp)) continue;
 
-            // Ficheiro seguro
             $ext = strtolower(pathinfo($origName, PATHINFO_EXTENSION));
             $newFilename = uniqid('media_') . '.' . $ext;
             $target = $uploadDir . $newFilename;
 
             if (move_uploaded_file($tmp, $target)) {
-                // Determinar tipo de mídia
                 $mime = $_FILES['files']['type'][$i] ?? '';
                 $type = str_starts_with($mime, 'video') ? 'video' : 'image';
 
-                // Inserir em service_media
-                $mStmt = $conn->prepare(
-                    "INSERT INTO service_media (service_id, file_name, media_type) VALUES (:sid, :fn, :mt)"
+                $mStmt = $db->prepare(
+                    "INSERT INTO service_media (service_id, file_name, media_type)
+                     VALUES (:sid, :fn, :mt)"
                 );
                 $mStmt->execute([
                     ':sid' => $serviceId,
@@ -83,7 +75,6 @@ try {
                     ':mt'  => $type
                 ]);
 
-                // Definir miniatura se for imagem e ainda não definida
                 if ($type === 'image' && $imageMini === null) {
                     $imageMini = $newFilename;
                 }
@@ -91,9 +82,9 @@ try {
         }
     }
 
-    // 3) Atualizar coluna image na tabela services (compatibilidade)
+    // 3) Atualizar a miniatura na tabela services
     if ($imageMini !== null) {
-        $uStmt = $conn->prepare(
+        $uStmt = $db->prepare(
             "UPDATE services SET image = :img WHERE service_id = :sid"
         );
         $uStmt->execute([

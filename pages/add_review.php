@@ -4,7 +4,6 @@ require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/flash.php';
 require_once __DIR__ . '/../database/connection.php';
 
-session_start();
 require_login();
 
 // Sanitizar e validar ID do pedido
@@ -65,7 +64,14 @@ require_once __DIR__ . '/../templates/header.php';
             <select name="rating" id="rating" required>
                 <option value="">-- Selecione --</option>
                 <?php for ($i = 1; $i <= 5; $i++): ?>
-                    <option value="<?= $i ?>"><?= $i ?><?= $i === 1 ? ' - Péssimo' : ($i === 5 ? ' - Excelente' : '') ?></option>
+                    <option value="<?= $i ?>">
+                    <?= $i ?>
+                    <?= $i === 1 ? ' - Péssimo'
+                        : ($i === 2 ? ' - Mau'
+                        : ($i === 3 ? ' - Decente'
+                        : ($i === 4 ? ' - Bom'
+                        : ' - Excelente'))) ?>
+                    </option>
                 <?php endfor; ?>
             </select>
         </div>

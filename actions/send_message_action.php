@@ -1,49 +1,61 @@
 <?php
-require_once '../includes/security.php';
-require_once '../includes/auth.php';
-require_once '../includes/flash.php';
-require_once __DIR__ . '/../database/connection.php';
-
 session_start();
+require_once __DIR__ . '/../includes/security.php';
+require_once __DIR__ . '/../includes/auth.php';
 require_login();
 
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    flash('Método inválido.', 'erro');
-    header('Location: ../pages/messages_inbox.php');
-    exit();
+// CSRF check com suporte a AJAX
+$token = $_POST['csrf_token'] ?? '';
+if (!hash_equals($_SESSION['csrf_token'] ?? '', $token)) {
+    $error = 'Token CSRF inválido.';
+    if (!empty($_SERVER['HTTP_X_REQUESTED_WITH'])) {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'error' => $error]);
+        exit();
+    }
+    die($error);
 }
 
-verify_csrf($_POST['csrf_token'] ?? '');
+require_once __DIR__ . '/../database/connection.php';
+$db = getConnection();
 
 $sender_id   = $_SESSION['user_id'];
-$receiver_id = sanitize($_POST['receiver_id'] ?? '');
-$content     = sanitize($_POST['content'] ?? '');
+$receiver_id = filter_var($_POST['receiver_id'], FILTER_VALIDATE_INT);
+$content     = trim($_POST['content'] ?? '');
 
-if (empty($receiver_id) || !is_numeric($receiver_id)) {
-    flash('ID de destinatário inválido.', 'erro');
-    header('Location: ../pages/messages_inbox.php');
-    exit();
+if (!$receiver_id) {
+    $error = 'ID de destinatário inválido.';
+    if (!empty($_SERVER['HTTP_X_REQUESTED_WITH'])) {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'error' => $error]);
+        exit();
+    }
+    die($error);
+}
+if (empty($content)) {
+    $error = 'A mensagem não pode ser vazia.';
+    if (!empty($_SERVER['HTTP_X_REQUESTED_WITH'])) {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'error' => $error]);
+        exit();
+    }
+    die($error);
 }
 
-if (empty($content)) {
-    flash('A mensagem não pode ser vazia.', 'erro');
-    header('Location: ../pages/messages_inbox.php');
-    exit();
+// Verifica se o usuário destino existe
+$stmtCheck = $db->prepare("SELECT user_id FROM users WHERE user_id = :id");
+$stmtCheck->execute([':id' => $receiver_id]);
+if (!$stmtCheck->fetch()) {
+    $error = 'Usuário destinatário não existe.';
+    if (!empty($_SERVER['HTTP_X_REQUESTED_WITH'])) {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'error' => $error]);
+        exit();
+    }
+    die($error);
 }
 
 try {
-    $db = getConnection();
-
-    // Verificar existência do destinatário
-    $stmtCheck = $db->prepare("SELECT user_id FROM users WHERE user_id = :id");
-    $stmtCheck->execute([':id' => $receiver_id]);
-    if (!$stmtCheck->fetch(PDO::FETCH_ASSOC)) {
-        flash('Usuário destinatário não existe.', 'erro');
-        header('Location: ../pages/messages_inbox.php');
-        exit();
-    }
-
-    // Inserir a mensagem
     $stmt = $db->prepare(
         "INSERT INTO messages (sender_id, receiver_id, content) VALUES (:sender_id, :receiver_id, :content)"
     );
@@ -52,14 +64,22 @@ try {
         ':receiver_id' => $receiver_id,
         ':content'     => $content
     ]);
+    $sent_at = date('Y-m-d H:i:s');
 
-    flash('Mensagem enviada com sucesso!', 'sucesso');
+    if (!empty($_SERVER['HTTP_X_REQUESTED_WITH'])) {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => true, 'content' => $content, 'sent_at' => $sent_at]);
+        exit();
+    }
+
     header("Location: ../pages/messages_chat.php?user={$receiver_id}");
     exit();
-
 } catch (PDOException $e) {
-    flash('Erro ao enviar mensagem: ' . $e->getMessage(), 'erro');
-    header('Location: ../pages/messages_inbox.php');
-    exit();
+    $error = 'Erro ao enviar mensagem: ' . $e->getMessage();
+    if (!empty($_SERVER['HTTP_X_REQUESTED_WITH'])) {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'error' => $error]);
+        exit();
+    }
+    die($error);
 }
-?>

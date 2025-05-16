@@ -4,7 +4,6 @@ require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/flash.php';
 require_once __DIR__ . '/../database/connection.php';
 
-session_start();
 require_login();
 
 // Apenas admin

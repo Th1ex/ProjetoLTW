@@ -48,8 +48,7 @@ if ($maxPrice !== '' && is_numeric($maxPrice)) {
 
 $sql .= " GROUP BY s.service_id";
 if ($minRating !== '' && is_numeric($minRating)) {
-    $sql .= " HAVING COALESCE(AVG(r.rating),0) >= :minr";
-    $params[':minr'] = $minRating;
+    $sql .= " HAVING COALESCE(AVG(r.rating),0) >= " . (float)$minRating;
 }
 
 $sql .= " ORDER BY s.created_at DESC";

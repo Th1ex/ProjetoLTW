@@ -3,7 +3,6 @@ require_once __DIR__ . '/../includes/security.php';
 require_once __DIR__ . '/../includes/flash.php';
 require_once __DIR__ . '/../database/connection.php';
 
-session_start();
 // Redireciona se já estiver logado
 if (isset($_SESSION['user_id'])) {
     header('Location: list_services.php');
