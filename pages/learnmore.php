@@ -6,7 +6,7 @@ require_once __DIR__ . '/../templates/header.php';
     margin: 0;
     padding: 0;
     font-family: 'Segoe UI', sans-serif;
-    background-image: url('/uploads/Background.png');
+    background-image: url('../uploads/Background.png');
     background-size: cover;
     background-position: center;
     min-height: 100vh;

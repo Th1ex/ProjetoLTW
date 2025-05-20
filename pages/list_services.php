@@ -12,6 +12,7 @@ $filterCategory = sanitize($_GET['category_id'] ?? '');
 $minPrice       = sanitize($_GET['min_price'] ?? '');
 $maxPrice       = sanitize($_GET['max_price'] ?? '');
 $minRating      = sanitize($_GET['min_rating'] ?? '');
+$maxDays = sanitize($_GET['max_days'] ?? '');
 
 // Construir query
 $sql = "
@@ -44,6 +45,11 @@ if ($minPrice !== '' && is_numeric($minPrice)) {
 if ($maxPrice !== '' && is_numeric($maxPrice)) {
     $sql .= " AND s.price <= :maxp";
     $params[':maxp'] = $maxPrice;
+}
+
+if ($maxDays !== '' && is_numeric($maxDays)) {
+    $sql .= " AND s.delivery_time <= :maxd";
+    $params[':maxd'] = $maxDays;
 }
 
 $sql .= " GROUP BY s.service_id";
@@ -111,6 +117,17 @@ require_once __DIR__ . '/../templates/header.php';
         <?php endfor; ?>
       </select>
     </div>
+
+    <div class="form-group">
+      <label for="max_days">Prazo Máx. (dias)</label>
+      <input type="number"
+            id="max_days"
+            name="max_days"
+            min="1"
+            value="<?= escape($maxDays) ?>"
+            placeholder="—">
+    </div>
+
 
     <div class="form-actions">
       <button type="submit" class="button">Filtrar</button>
