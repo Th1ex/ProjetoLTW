@@ -86,7 +86,7 @@ try {
     exit();
 
 } catch (PDOException $e) {
-    flash('erro ao registar utilizador: ' . $e->getMessage(), 'erro');
+    flash('Erro ao registar utilizador: ' . $e->getMessage(), 'erro');
     header('Location: ../pages/register.php');
     exit();
 }
