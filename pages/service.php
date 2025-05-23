@@ -4,7 +4,9 @@ require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/flash.php';
 require_once __DIR__ . '/../database/connection.php';
 
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 require_login();
 
 // Sanitizar e validar service_id
@@ -18,7 +20,7 @@ if (empty($service_id) || !is_numeric($service_id)) {
 try {
     $db = getConnection();
 
-    // Busca dados do serviço
+    // Buscar dados do serviço
     $stmt = $db->prepare("
         SELECT s.*, c.category_name, u.username
         FROM services s
@@ -27,13 +29,13 @@ try {
         WHERE s.service_id = :sid
     ");
     $stmt->execute([':sid' => $service_id]);
-    $svc = $stmt->fetch(PDO::FETCH_ASSOC);
+    $service = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if (!$svc) {
+    if (!$service) {
         throw new Exception('Serviço não encontrado.');
     }
 
-    // Busca mídia associada
+    // Buscar mídia associada
     $medStmt = $db->prepare("
         SELECT file_name, media_type
         FROM service_media
@@ -53,38 +55,51 @@ require_once __DIR__ . '/../templates/header.php';
 ?>
 
 <div class="service-container">
-    <h2><?= escape($svc['title']) ?></h2>
-    <p><strong>Freelancer:</strong> <?= escape($svc['username']) ?></p>
-    <p><strong>Categoria:</strong> <?= escape($svc['category_name']) ?></p>
-    <p><strong>Preço:</strong> € <?= escape(number_format($svc['price'], 2, ',', '.')) ?></p>
-    <p><strong>Entrega:</strong> <?= escape($svc['delivery_time']) ?> dias</p>
-
-    <h3>Galeria</h3>
-    <div class="slider" data-slider>
-        <button class="slider-nav prev" data-prev>&larr;</button>
-        <div class="slider-track">
-            <?php foreach ($media as $m):
-                $src = '../uploads/' . escape($m['file_name']);
-                if ($m['media_type'] === 'image'): ?>
-                    <img src="<?= $src ?>" class="slide" alt="Media">
-                <?php else: ?>
-                    <video src="<?= $src ?>" class="slide" controls></video>
-                <?php endif;
-            endforeach; ?>
-        </div>
-        <button class="slider-nav next" data-next>&rarr;</button>
+    <div class="service-header">
+        <h1 class="service-title"><?= escape($service['title']) ?></h1>
+        <p class="service-category"><?= escape($service['category_name']) ?></p>
     </div>
 
-    <h3>Descrição</h3>
-    <p><?= nl2br(escape($svc['description'])) ?></p>
+    <div class="service-content">
+        <div class="service-info">
+            <p><strong>Freelancer:</strong> <?= escape($service['username']) ?></p>
+            <p><strong>Preço:</strong> € <?= escape(number_format($service['price'], 2, ',', '.')) ?></p>
+            <p><strong>Entrega:</strong> <?= escape($service['delivery_time']) ?> dias</p>
 
-    <?php if ($_SESSION['user_id'] != $svc['user_id']): ?>
+            <h3 class="description-title">Descrição</h3>
+            <p class="service-description"><?= nl2br(escape($service['description'])) ?></p>
+        </div>
+
+
+        <?php if (!empty($media)): ?>
+        <div class="media-gallery">
+            <div class="slider" data-slider>
+                <div class="slider-track">
+                    <?php foreach ($media as $m):
+                        $src = '../uploads/' . escape($m['file_name']);
+                        if ($m['media_type'] === 'image'): ?>
+                            <div class="slide"><img src="<?= $src ?>" alt="Imagem do serviço"></div>
+                        <?php else: ?>
+                            <div class="slide"><video src="<?= $src ?>" controls></video></div>
+                        <?php endif;
+                    endforeach; ?>
+                </div>
+                <button class="slider-nav prev" data-prev>&larr;</button>
+                <button class="slider-nav next" data-next>&rarr;</button>
+            </div>
+        </div>
+        <?php endif; ?>
+    </div>
+
+    <?php if ($_SESSION['user_id'] != $service['user_id']): ?>
+        <div class="actions">
         <form action="../actions/hire_service_action.php" method="post" class="inline-form">
             <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
             <input type="hidden" name="service_id" value="<?= escape($service_id) ?>">
-            <button type="submit">Contratar</button>
+            <button type="submit" class="button">Contratar</button>
         </form>
-        <a href="messages_chat.php?user=<?= escape($svc['user_id']) ?>">Enviar Mensagem</a>
+        <a href="messages_chat.php?user=<?= escape($service['user_id']) ?>" class="button">Enviar Mensagem</a>
+    </div>
     <?php endif; ?>
 </div>
 

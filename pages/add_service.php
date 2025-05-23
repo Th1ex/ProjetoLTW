@@ -25,6 +25,7 @@ require_once __DIR__ . '/../templates/header.php';
   <h2>Adicionar Novo Serviço</h2>
 
   <form action="../actions/add_service_action.php" method="post" enctype="multipart/form-data">
+    <!-- Token de segurança (fora da grid de campos) -->
     <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
 
     <div class="form-group">
@@ -62,11 +63,10 @@ require_once __DIR__ . '/../templates/header.php';
       <input type="file" id="files" name="files[]" multiple accept="image/*,video/*">
     </div>
 
-    <div class="form-group">
-      <button type="submit" class="btn-primary">Adicionar Serviço</button>
-    </div>
+    <button type="submit">Adicionar Serviço</button>
   </form>
 </div>
+
 
 <?php
 require_once __DIR__ . '/../templates/footer.php';

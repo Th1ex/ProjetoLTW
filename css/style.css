@@ -263,7 +263,6 @@ body {
 .add-service-page form {
   display: flex;
   flex-direction: column;
-  gap: 5px;
 }
 
 .add-service-page label {
@@ -297,8 +296,9 @@ body {
   color: #fff;
   font-size: 16px;
   cursor: pointer;
-  margin-top: 10px;
+  margin: 0;
 }
+
 
 .add-service-page button[type="submit"]:hover {
   background-color: #360060;
@@ -961,37 +961,61 @@ body {
 }
 
 .service-title {
-  font-size: 1.75rem;
-  font-weight: bold;
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: #fff;
+  text-align: center;
+  margin-bottom: 0px;
 }
 
 .service-category {
-  background-color: rgba(255, 255, 255, 0.05);
-  font-weight: bold;
-  font-size: 1rem;
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #d1bfff;
+  margin-bottom: 0px;
+  text-align: center;
+  letter-spacing: 1px;
 }
 
 .service-content {
   display: flex;
-  gap: 10px;
+  gap: 5px;
 }
 
 .service-info {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 0px;
+  margin-top: 20px;
+  overflow: hidden;
+}
+
+.service-info p {
+  margin-top: 5px;
+  margin: 5px 0; /* reduz espaço entre Freelancer, Preço, Entrega */
+}
+
+.description-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #ffffff;
+  padding-top: 20px; /* substitui o 0cap inválido */
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 .service-description {
-  background-color: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(10px);
-  padding: 15px;
-  border-radius: 12px;
-  color: #fff;
-  font-size: 1rem;
-  margin-top: 10px;
+  font-size: 1.05rem;
+  font-weight: 400;
+  color: #f0f0f0;
+  line-height: 1.8;
+  margin-bottom: 10px;
+  margin-top: 0;
 }
+
+
+
 
 .media-gallery {
   flex: 1;
@@ -1068,8 +1092,8 @@ body {
   position: relative;
   overflow: hidden;
   width: 100%;
-  max-width: 600px;      /* ajusta conforme queiras */
-  margin: 2rem auto;      /* centraliza abaixo do título */
+  max-width: 600px;
+  margin: 2rem auto;
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.05);
 }
@@ -1081,9 +1105,18 @@ body {
 
 .slide {
   min-width: 100%;
-  height: auto;
-  object-fit: contain;
-  display: block;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.slide img,
+.slide video {
+  max-height: 400px;        /* Limita altura da imagem/vídeo */
+  width: auto;
+  max-width: 100%;
+  object-fit: cover;
+  border-radius: 10px;
 }
 
 .slider-nav {
