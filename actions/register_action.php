@@ -28,19 +28,19 @@ if (empty($name) || empty($username) || empty($email) || empty($password)) {
 }
 
 if (!preg_match("/^[a-zA-Z0-9_]{3,20}$/", $username)) {
-    flash('O nome de utilizador deve ter entre 3 e 20 caracteres alfanuméricos ou underscores.', 'Erro');
+    flash('O nome de utilizador deve ter entre 3 e 20 caracteres alfanuméricos ou underscores.', 'erro');
     header('Location: ../pages/register.php');
     exit();
 }
 
 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-    flash('Endereço de email inválido.', 'Erro');
+    flash('Endereço de email inválido.', 'erro');
     header('Location: ../pages/register.php');
     exit();
 }
 
 if (!preg_match("/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*?&]{8,}$/", $password)) {
-    flash('A palavra-passe deve ter pelo menos 8 caracteres, incluindo letras e números.', 'Erro');
+    flash('A palavra-passe deve ter pelo menos 8 caracteres, incluindo letras e números.', 'erro');
     header('Location: ../pages/register.php');
     exit();
 }
@@ -86,7 +86,7 @@ try {
     exit();
 
 } catch (PDOException $e) {
-    flash('Erro ao registar utilizador: ' . $e->getMessage(), 'erro');
+    flash('erro ao registar utilizador: ' . $e->getMessage(), 'erro');
     header('Location: ../pages/register.php');
     exit();
 }
