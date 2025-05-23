@@ -30,6 +30,36 @@ if (empty($title) || empty($description) || empty($price) || empty($delivery_tim
     exit();
 }
 
+if (!preg_match("/^[a-zA-Z0-9\s.,!?()-]{5,100}$/u", $title)) {
+    flash('O título deve ter entre 5 e 100 caracteres alfanuméricos e pontuação básica.', 'erro');
+    header('Location: ../pages/add_service.php');
+    exit();
+}
+
+if (!preg_match("/^.{10,1000}$/su", $description)) {
+    flash('A descrição deve ter entre 10 e 1000 caracteres.', 'erro');
+    header('Location: ../pages/add_service.php');
+    exit();
+}
+
+if (!preg_match("/^\d+(\.\d{1,2})?$/", $price)) {
+    flash('O preço deve ser um número válido, com até duas casas decimais.', 'erro');
+    header('Location: ../pages/add_service.php');
+    exit();
+}
+
+if (!preg_match("/^\d{1,3}$/", $delivery_time)) {
+    flash('Tempo de entrega inválido.', 'erro');
+    header('Location: ../pages/add_service.php');
+    exit();
+}
+
+if (!preg_match("/^\d+$/", $category_id)) {
+    flash('Categoria inválida.', 'erro');
+    header('Location: ../pages/add_service.php');
+    exit();
+}
+
 try {
     $db = getConnection();
     // 1) Inserir serviço (imagem inicial null)
