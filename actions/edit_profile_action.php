@@ -42,12 +42,11 @@ if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
     exit();
 }
 
-if (!preg_match("/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*?&]{8,}$/", $password)) {
-    flash('A palavra-passe deve ter pelo menos 8 caracteres, incluindo letras e números.', 'erro');
+if (!preg_match('/^[\w.\-]+@[\w\-]+\.[A-Za-z]{2,}$/', $email)) {
+    flash('Email em formato inválido.', 'erro');
     header('Location: ../pages/register.php');
     exit();
 }
-
 // Verifica se o ID corresponde ao utilizador logado
 if ($user_id != $_SESSION['user_id']) {
     flash('ID de utilizador inválido.', 'erro');

@@ -103,3 +103,5 @@ CREATE TABLE IF NOT EXISTS service_media (
 
 INSERT INTO categories (category_name) VALUES ('Design');
 INSERT INTO categories (category_name) VALUES ('Programação');
+INSERT INTO categories (category_name) VALUES ('Limpezas');
+INSERT INTO categories (category_name) VALUES ('Gaming');

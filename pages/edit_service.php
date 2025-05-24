@@ -15,7 +15,7 @@ if (empty($service_id) || !is_numeric($service_id)) {
     exit();
 }
 
-db = getConnection();
+$db = getConnection();
 // Buscar serviço
 try {
     $stmt = $db->prepare("SELECT * FROM services WHERE service_id = :id");

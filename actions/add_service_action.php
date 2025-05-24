@@ -17,69 +17,93 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 verify_csrf($_POST['csrf_token'] ?? '');
 
-// Sanitizar inputs
-$title         = sanitize($_POST['title'] ?? '');
-$description   = sanitize($_POST['description'] ?? '');
-$price         = sanitize($_POST['price'] ?? '0');
-$delivery_time = sanitize($_POST['delivery_time'] ?? '1');
-$category_id   = sanitize($_POST['category_id'] ?? '');
+// Captura de inputs brutos
+$titleRaw       = $_POST['title'] ?? '';
+$descriptionRaw = $_POST['description'] ?? '';
+$priceRaw       = $_POST['price'] ?? '';
+$deliveryRaw    = $_POST['delivery_time'] ?? '';
+$categoryRaw    = $_POST['category_id'] ?? '';
 
-if (empty($title) || empty($description) || empty($price) || empty($delivery_time) || empty($category_id)) {
+// Sanitização básica (remove tags e espaços extras)
+$title       = sanitize($titleRaw);
+$description = sanitize($descriptionRaw);
+
+// Verificação de campos obrigatórios
+if (trim($title) === '' || trim($description) === '' || $priceRaw === '' || $deliveryRaw === '' || $categoryRaw === '') {
     flash('Campos obrigatórios em falta.', 'erro');
     header('Location: ../pages/add_service.php');
     exit();
 }
 
-if (!preg_match("/^[a-zA-Z0-9\s.,!?()-]{5,100}$/u", $title)) {
-    flash('O título deve ter entre 5 e 100 caracteres alfanuméricos e pontuação básica.', 'erro');
+// Validações sem regex
+// 1) Título: 5 a 100 caracteres
+$lenTitle = mb_strlen($title);
+if ($lenTitle < 5 || $lenTitle > 100) {
+    flash('O título deve ter entre 5 e 100 caracteres.', 'erro');
     header('Location: ../pages/add_service.php');
     exit();
 }
 
-if (!preg_match("/^.{10,1000}$/su", $description)) {
+// 2) Descrição: 10 a 1000 caracteres
+$lenDesc = mb_strlen($description);
+if ($lenDesc < 10 || $lenDesc > 1000) {
     flash('A descrição deve ter entre 10 e 1000 caracteres.', 'erro');
     header('Location: ../pages/add_service.php');
     exit();
 }
 
-if (!preg_match("/^\d+(\.\d{1,2})?$/", $price)) {
-    flash('O preço deve ser um número válido, com até duas casas decimais.', 'erro');
+// 3) Preço: numérico e >= 0, até duas casas decimais
+if (!is_numeric($priceRaw) || $priceRaw < 0) {
+    flash('O preço deve ser um número válido.', 'erro');
     header('Location: ../pages/add_service.php');
     exit();
 }
+$parts = explode('.', $priceRaw);
+if (isset($parts[1]) && strlen($parts[1]) > 2) {
+    flash('O preço pode ter no máximo duas casas decimais.', 'erro');
+    header('Location: ../pages/add_service.php');
+    exit();
+}
+$price = number_format((float)$priceRaw, 2, '.', '');
 
-if (!preg_match("/^\d{1,3}$/", $delivery_time)) {
+// 4) Tempo de entrega: inteiro de 1 a 999
+if (!ctype_digit($deliveryRaw) || (int)$deliveryRaw < 1 || (int)$deliveryRaw > 999) {
     flash('Tempo de entrega inválido.', 'erro');
     header('Location: ../pages/add_service.php');
     exit();
 }
+$deliveryInt = (int)$deliveryRaw;
 
-if (!preg_match("/^\d+$/", $category_id)) {
+// 5) Categoria: inteiro positivo
+if (!ctype_digit($categoryRaw) || (int)$categoryRaw < 1) {
     flash('Categoria inválida.', 'erro');
     header('Location: ../pages/add_service.php');
     exit();
 }
+$categoryInt = (int)$categoryRaw;
 
 try {
     $db = getConnection();
-    // 1) Inserir serviço (imagem inicial null)
+    // Inserir serviço (imagem inicial null)
     $stmt = $db->prepare(
         "INSERT INTO services (user_id, category_id, title, description, price, delivery_time, image)
          VALUES (:uid, :cid, :t, :d, :p, :days, NULL)"
     );
     $stmt->execute([
         ':uid'   => $_SESSION['user_id'],
-        ':cid'   => $category_id,
+        ':cid'   => $categoryInt,
         ':t'     => $title,
         ':d'     => $description,
         ':p'     => $price,
-        ':days'  => $delivery_time
+        ':days'  => $deliveryInt
     ]);
     $serviceId = $db->lastInsertId();
 
-    // 2) Processar uploads múltiplos
+    // Processar uploads múltiplos
     $uploadDir = __DIR__ . '/../uploads/';
-    if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+    if (!is_dir($uploadDir)) {
+        mkdir($uploadDir, 0755, true);
+    }
 
     $imageMini = null;
     if (!empty($_FILES['files']['name']) && is_array($_FILES['files']['name'])) {
@@ -112,7 +136,7 @@ try {
         }
     }
 
-    // 3) Atualizar a miniatura na tabela services
+    // Atualizar a miniatura na tabela services
     if ($imageMini !== null) {
         $uStmt = $db->prepare(
             "UPDATE services SET image = :img WHERE service_id = :sid"

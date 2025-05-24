@@ -63,8 +63,13 @@ require_once __DIR__ . '/../templates/header.php';
                     <td><?= escape($order['status']) ?></td>
                     <td><?= escape(date('Y-m-d', strtotime($order['order_date']))) ?></td>
                     <td>
-                        <a href="custom_offer.php?order_id=<?= escape($order['order_id']) ?>">Custom Offer</a>
-
+                        <?php if ($order['status'] !== 'closed'): ?>
+                            <a href="custom_offer.php?order_id=<?= escape($order['order_id']) ?>">
+                                Custom Offer
+                            </a>
+                            &nbsp;|&nbsp;
+                        <?php endif; ?>
+                        
                         <?php if ($order['status'] === 'pending'): ?>
                             <form action="../actions/complete_order_action.php" method="post" class="inline-form">
                                 <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">

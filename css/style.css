@@ -133,7 +133,7 @@ body {
 .filter-container {
   display: flex;
   justify-content: center;
-  margin-top: 0px;
+  margin-top: 0;
 }
 
 .filter-form {
@@ -142,17 +142,17 @@ body {
   border-radius: 10px;
   display: flex;
   flex-wrap: wrap;
-  gap: 20px;
+  gap: 0.5rem 1rem;
   max-width: 1000px;
   box-shadow: 0 0 10px rgba(0,0,0,0.05);
-  justify-content: center;
+  justify-content: space-between;
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
-  min-width: 150px;
-  flex: 1 1 180px;
+  min-width: 100px;
+  flex: 1 1 120px;
 }
 
 .form-group label {
@@ -167,6 +167,7 @@ body {
   border-radius: 4px;
   font-size: 14px;
 }
+
 
 .form-actions {
   display: flex;
@@ -247,9 +248,9 @@ body {
 .add-service-page {
   background-color: rgba(255,255,255,0.05);
   backdrop-filter: blur(10px);
-  padding: 30px;
+  padding: 20px;
   max-width: 600px;
-  margin: 40px auto;
+  margin: 20px auto;
   border-radius: 12px;
   box-shadow: 0 0 15px rgba(0,0,0,0.3);
   color: #fff;
@@ -257,17 +258,18 @@ body {
 
 .add-service-page h2 {
   text-align: center;
-  margin-bottom: 10px;
+  margin-bottom: 0.75rem;
 }
 
 .add-service-page form {
   display: flex;
   flex-direction: column;
+  gap: 0.5rem;  
 }
 
 .add-service-page label {
   font-weight: bold;
-  margin-bottom: 5px;
+  margin-bottom: 3px;
 }
 
 .add-service-page input[type="text"],
@@ -275,7 +277,7 @@ body {
 .add-service-page input[type="file"],
 .add-service-page select,
 .add-service-page textarea {
-  padding: 8px 10px;
+  padding: 6px 8px;
   border-radius: 6px;
   border: none;
   font-size: 14px;
@@ -285,11 +287,11 @@ body {
 
 .add-service-page textarea {
   resize: vertical;
-  min-height: 100px;
+  min-height: 80px;
 }
 
 .add-service-page button[type="submit"] {
-  padding: 10px 15px;
+  padding: 8px 12px;
   border: none;
   border-radius: 6px;
   background-color: #4b0082;
@@ -297,6 +299,7 @@ body {
   font-size: 16px;
   cursor: pointer;
   margin: 0;
+  margin-top: 0.5rem;     
 }
 
 
